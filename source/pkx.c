@@ -525,11 +525,11 @@ FormData *pkx_get_legal_form_data(const u16 species, const int game) {
 	return forms;
 }
 
-u32 pkx_seedstep(const u32 seed) { 
+u32 pkx_seedstep(const u32 seed) {
 	return seed * 0x41C64E6D + 0x00006073; 
 }
 
-u32 pkx_lcrng(u32 seed) { 
+u32 pkx_lcrng(u32 seed) {
 	return seed * 0x41C64E6D + 0x00006073; 
 }
 
@@ -544,11 +544,20 @@ u32 pkx_get_save_address(const int boxnumber, const int indexnumber) {
 		boxpos = boxnumber < 33 ? 0x04E00 : 0x01400;
 	else if (game_getisUSUM())
 		boxpos = boxnumber < 33 ? 0x05200 : 0x01600;
+	else if (game_isgen5())
+		boxpos = boxnumber < 25 ? 0x00400 : 0x18e00;
 
-	if (boxnumber < 33)
-		return boxpos + (ofs.pkmnLength * 30 * boxnumber) + (indexnumber * ofs.pkmnLength);
-
-	return boxpos + indexnumber * 260;
+	if (game_getisORAS() || game_getisSUMO() || game_getisUSUM()) {
+		if (boxnumber < 33)
+			return boxpos + (ofs.pkmnLength * 30 * boxnumber) + (indexnumber * ofs.pkmnLength);
+		return boxpos + indexnumber * 260;
+	}
+	
+	else if (game_isgen5()) {
+		if (boxnumber < 25)
+			return boxpos + (ofs.pkmnLength * 30 * boxnumber) + (indexnumber * ofs.pkmnLength);
+		return boxpos + indexnumber * 220;
+	}
 }
 
 void pkx_calculate_checksum(u8* data) {
@@ -565,10 +574,8 @@ u16 pkx_return_checksum(u8* data) {
 	return chk;
 }
 
-void pkx_shuffle_array(u8* pkmn, const u32 encryptionkey) {
-    const int BLOCKLENGHT = 56;
-
-    u8 seed = (((encryptionkey & 0x3E000) >> 0xD) % 24);
+void pkx_shuffle_array(u8* pkmn, const u32 encryptionkey, const BLOCKLENGHT) {
+	u8 seed = (((encryptionkey & 0x3E000) >> 0xD) % 24);
 
     int aloc[24] = { 0, 0, 0, 0, 0, 0, 1, 1, 2, 3, 2, 3, 1, 1, 2, 3, 2, 3, 1, 1, 2, 3, 2, 3 };
     int bloc[24] = { 1, 1, 2, 3, 2, 3, 0, 0, 0, 0, 0, 0, 2, 3, 1, 1, 3, 2, 2, 3, 1, 1, 3, 2 };
@@ -587,7 +594,8 @@ void pkx_shuffle_array(u8* pkmn, const u32 encryptionkey) {
     }
 }
 
-void pkx_decrypt(u8* pkmn) {
+void pk67_decrypt(u8* pkmn) {
+	const int BLOCKLENGTH = 56;
     u32 encryptionkey = *(u32*)(pkmn);
     u32 seed = encryptionkey;
 
@@ -599,15 +607,40 @@ void pkx_decrypt(u8* pkmn) {
         memcpy(&pkmn[i], &temp, 2);
     }
 
-    pkx_shuffle_array(pkmn, encryptionkey);
+    pkx_shuffle_array(pkmn, encryptionkey, BLOCKLENGTH);
 }
 
-void pkx_encrypt(u8* pkmn) {
+void pk45_decrypt(u8* pkmn) {
+	const int BLOCKLENGTH = 32;
+	u32 encryptionKey = *(u32*)(pkmn);
+	u32 seed = encryptionKey;
+	u16 chk = *(u16*)(&pkmn[6]);
+
+	u16 temp;
+    for (int i = 0x08; i < 4 * BLOCKLENGTH + 8; i += 2) {
+        memcpy(&temp, &pkmn[i], 2);
+        temp ^= (pkx_seedstep(chk) >> 16);
+        chk = pkx_seedstep(chk);
+        memcpy(&pkmn[i], &temp, 2);
+    }
+
+    for (int i = 4 * BLOCKLENGTH + 8; i < ofs.pkmnLength; i += 2) {
+        memcpy(&temp, &pkmn[i], 2);
+        temp ^= (pkx_seedstep(seed) >> 16);
+        seed = pkx_seedstep(seed);
+        memcpy(&pkmn[i], &temp, 2);
+    }
+
+    pkx_shuffle_array(pkmn, encryptionKey, BLOCKLENGTH);
+}
+
+void pk67_encrypt(u8* pkmn) {
+	const int BLOCKLENGTH = 56;
     u32 encryptionkey = *(u32*)(pkmn);
     u32 seed = encryptionkey;
 
     for(int i = 0; i < 11; i++)
-        pkx_shuffle_array(pkmn, encryptionkey);
+        pkx_shuffle_array(pkmn, encryptionkey, BLOCKLENGTH);
 
     u16 temp;
     for(int i = 0x08; i < ofs.pkmnLength; i += 2) {
@@ -618,9 +651,39 @@ void pkx_encrypt(u8* pkmn) {
     }
 }
 
+void pk45_encrypt(u8* pkmn) {
+	const int BLOCKLENGTH = 32;
+	u32 encryptionKey;
+	memcpy(&encryptionKey, &pkmn[0], 4);
+	u32 seed = encryptionKey;
+	u16 chk;
+	memcpy(&chk, &pkmn[6], 2);
+
+	for(int i = 0; i < 11; i++)
+		pkx_shuffle_array(pkmn, encryptionKey, BLOCKLENGTH);
+
+	u16 temp;
+    for (int i = 0x08; i < 4 * BLOCKLENGTH + 8; i += 2) {
+        memcpy(&temp, &pkmn[i], 2);
+        temp ^= (pkx_seedstep(chk) >> 16);
+        chk = pkx_seedstep(chk);
+        memcpy(&pkmn[i], &temp, 2);
+    }
+
+    for (int i = 4 * BLOCKLENGTH + 8; i < ofs.pkmnLength; i += 2) {
+        memcpy(&temp, &pkmn[i], 2);
+        temp ^= (pkx_seedstep(seed) >> 16);
+        seed = pkx_seedstep(seed);
+        memcpy(&pkmn[i], &temp, 2);
+    }
+}
+
 void pkx_get(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
     memcpy(pkmn, &mainbuf[pkx_get_save_address(boxnumber, indexnumber)], ofs.pkmnLength);
-    pkx_decrypt(pkmn);
+    if (game_isgen7() || game_isgen6())
+        pk67_decrypt(pkmn);
+    if (game_isgen5() || game_isgen4())
+    	pk45_decrypt(pkmn);
 }
 
 void pkx_set(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
@@ -635,7 +698,7 @@ void pkx_set(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) 
 		memcpy(ot_name, &pkmn[0xB0], ofs.nicknameLength);
 		memcpy(save_name, &mainbuf[ofs.saveOT], ofs.nicknameLength);
 		
-		if (!((getSaveTID(mainbuf) == pkx_get_tid(pkmn)) && (getSaveSID(mainbuf) == pkx_get_sid(pkmn)) && 
+		if (!((getSaveTID(mainbuf) == pkx_get_tid(pkmn)) && (getSaveSID(mainbuf) == pkx_get_sid(pkmn)) &&
 			 (getSaveGender(mainbuf) == pkx_get_ot_gender(pkmn)) && !memcmp(ot_name, save_name, ofs.nicknameLength)) &&
 			 !(pkx_is_egg(pkmn))) { //you're the first owner
 			pkx_set_ht(pkmn, save_name);
@@ -648,130 +711,207 @@ void pkx_set(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) 
 	}
 
     pkx_calculate_checksum(pkmn);
-    pkx_encrypt(pkmn);
+	if (game_isgen7() || game_isgen6())
+        pk67_encrypt(pkmn);
+	if (game_isgen5() || game_isgen4())
+		pk45_encrypt(pkmn);
 
     memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, ofs.pkmnLength);
 }
 
 void pkx_set_as_it_is(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
     pkx_calculate_checksum(pkmn);
-    pkx_encrypt(pkmn);
+    pk67_encrypt(pkmn);
 	
     memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, ofs.pkmnLength);
 }
 
-u8 pkx_get_HT(u8* pkmn) { 
-	return *(u8*)(pkmn + 0xDE); 
+// Only useful for gen >6
+u8 pkx_get_HT(u8* pkmn) {
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xDE);
+	else
+		return 0;
 }
 
-u8 pkx_get_gender(u8* pkmn) { 
-	return ((*(u8*)(pkmn + 0x1D)) >> 1) & 0x3; 
+u8 pkx_get_gender(u8* pkmn) {
+	if (game_is3DS())
+		return ((*(u8*)(pkmn + 0x1D)) >> 1) & 0x3;
+	else if (game_isDS())
+		return ((*(u8*)(pkmn + 0x40)) >> 1) & 0x3;
+	return 0;
 }
 
-u8 pkx_get_language(u8* pkmn) { 
-	return *(u8*)(pkmn + 0xE3); 
+u8 pkx_get_language(u8* pkmn) {
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xE3);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x17);
+	return 0;
 }
 
-u8 pkx_get_ability(u8* pkmn) { 
-	return *(u8*)(pkmn + 0x14); 
+u8 pkx_get_ability(u8* pkmn) {
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0x14);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x15);
+	return 0;
 }
 
-u8 pkx_get_ability_number(u8* pkmn) { 
-	return *(u8*)(pkmn + 0x15); 
+u8 pkx_get_ability_number(u8* pkmn) {
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0x15);
+	else if (game_isgen5())
+		return (*(u8*)(pkmn + 0x42) & 1 == 1) ? 4 : (1 << ((pkx_get_pid(pkmn) >> 16) & 1));
+	else if (game_isgen4())
+		return pkx_get_pid(pkmn) & 1;
+	return 0;
 }
 
-u8 pkx_get_form(u8* pkmn) { 
-	return ((*(u8*)(pkmn + 0x1D)) >> 3); 
+u8 pkx_get_form(u8* pkmn) {
+	if (game_is3DS())
+		return ((*(u8*)(pkmn + 0x1D)) >> 3);
+	else if (game_isDS())
+		return ((*(u8*)(pkmn + 0x40)) >> 3);
+	return 0;
 }
 
-u16 pkx_get_item(u8* pkmn) { 
+// Same for Gens 4-7
+u16 pkx_get_item(u8* pkmn) {
 	return *(u16*)(pkmn + 0x0A); 
 }
 
-u8 pkx_get_hp_type(u8* pkmn) { 
-	return 15 * ((pkx_get_iv(pkmn, 0)& 1) 
-		  + 2 * (pkx_get_iv(pkmn, 1) & 1) 
-		  + 4 * (pkx_get_iv(pkmn, 2) & 1) 
-		  + 8 * (pkx_get_iv(pkmn, 3) & 1) 
-		  + 16 * (pkx_get_iv(pkmn, 4) & 1) 
-		  + 32 * (pkx_get_iv(pkmn, 5) & 1)) / 63; 
+// Same for Gens 4-7
+u8 pkx_get_hp_type(u8* pkmn) {
+	return 15 * ((pkx_get_iv(pkmn, 0)& 1)
+		  + 2 * (pkx_get_iv(pkmn, 1) & 1)
+		  + 4 * (pkx_get_iv(pkmn, 2) & 1)
+		  + 8 * (pkx_get_iv(pkmn, 3) & 1)
+		  + 16 * (pkx_get_iv(pkmn, 4) & 1)
+		  + 32 * (pkx_get_iv(pkmn, 5) & 1)) / 63;
 }
 
-u8 pkx_get_ot_gender(u8* pkmn) { 
-	return ((*(u8*)(pkmn + 0xDD)) >> 7); 
+u8 pkx_get_ot_gender(u8* pkmn) {
+	if (game_is3DS())
+		return ((*(u8*)(pkmn + 0xDD)) >> 7);
+	else if (game_isDS())
+		return ((*(u8*)(pkmn + 0x8C)) >> 7);
+	return 0;
 }
 
 bool pkx_is_egg(u8* pkmn) {
-    u32 buf = *(u32*)(pkmn + 0x74);
+    u32 buf = 0x0;
+    if (game_is3DS())
+    	buf = *(u32*)(pkmn + 0x74);
+    else if (game_isDS())
+    	buf = *(u32*)(pkmn + 0x38);
     buf = buf >> 30;
     buf = buf & 0x1;
 	return buf == 1 ? true : false;
 }
 
 void pkx_reroll_encryption_key(u8* pkmn) {
-	srand(time(NULL));
-	u32 encryptbuffer = rand();
-	memcpy(&pkmn[0x0], &encryptbuffer, 4);
+	if (game_is3DS()) {
+		srand(time(NULL));
+		u32 encryptbuffer = rand();
+		memcpy(&pkmn[0x0], &encryptbuffer, 4);
+	}
+	else if (game_isDS())
+		pkx_reroll_pid(pkmn);
 }
 
 void pkx_reroll_pid(u8* pkmn) {
     srand(pkx_get_pid(pkmn));
     u32 pidbuffer = rand();
-    memcpy(&pkmn[0x18], &pidbuffer, 4);
+    if (game_is3DS())
+    	memcpy(&pkmn[0x18], &pidbuffer, 4);
+    else if (game_isDS())
+    	memcpy(&pkmn[0x00], &pidbuffer, 4);
 }
 
 u32 pkx_get_pid(u8* pkmn) {
-    return *(u32*)(pkmn + 0x18);
+	if (game_is3DS())
+		return *(u32*)(pkmn + 0x18);
+	else if (game_isDS())
+		return *(u32*)(pkmn + 0x00);
+	return 0;
 }
 
 bool pkx_get_nickname_flag(u8* pkmn) {
-	u8 buf = *(u8*)(pkmn + 0x77);
-	buf = buf >> 7;
-	buf = buf & 0x1;
+	u8 buf = 0;
+	if (game_is3DS()) {
+		buf = *(u8*)(pkmn + 0x77);
+		buf = buf >> 7;
+		buf = buf & 0x1;
+	}
+	else if (game_isDS()) {
+		buf = *(u8*)(pkmn + 0x38);
+		buf = buf >> 31;
+		buf = buf & 0x1;
+	}
 	return buf == 1 ? true : false;
 }
 
-u16 pkx_get_egg_move(u8 *pkmn, const int nmove) { 
+u16 pkx_get_egg_move(u8 *pkmn, const int nmove) {
 	return *(u16*)(pkmn + 0x6A + nmove*2);
 }
 
 bool pkx_get_pokerus (u8* pkmn) {
-	u8 pkrs = *(u8*)(pkmn + 0x2B);
+	u8 pkrs;
+	if (game_is3DS())
+		pkrs = *(u8*)(pkmn + 0x2B);
+	else if (game_isDS())
+		pkrs = *(u8*)(pkmn + 0x82);
 	pkrs = pkrs >> 4;
 	return pkrs > 0;
 }
 
 u16 pkx_get_move(u8* pkmn, const int nmove) {
-	return *(u16*)(pkmn + 0x5A + nmove*2);
+	if(game_isgen6() || game_isgen7())
+		return *(u16*)(pkmn + 0x5A + nmove*2);
+	else if (game_isgen5() || game_isgen4())
+		return *(u16*)(pkmn + 0x28 + nmove*2);
+	return 0; // GB VC games, anyone?
 }
 
 u32 *pkx_get_ot(u8* pkmn, u32* dst) {
 	u16 src[ofs.nicknameLength];
-	memcpy(src, &pkmn[0xB0], ofs.nicknameLength);
+	if (game_is3DS())
+		memcpy(src, &pkmn[0xB0], ofs.nicknameLength);
+	else if (game_isDS())
+		memcpy(src, &pkmn[0x68], ofs.nicknameLength);
 	utf16_to_utf32(dst, src, ofs.nicknameLength);
 	return dst;
 }
 
 u32 *pkx_get_nickname(u8* pkmn, u32* dst) {
 	u16 src[ofs.nicknameLength];
-	memcpy(src, &pkmn[0x40], ofs.nicknameLength);
+	if (game_is3DS())
+		memcpy(src, &pkmn[0x40], ofs.nicknameLength);
+	else if (game_isDS())
+		memcpy(src, &pkmn[0x48], ofs.nicknameLength);
 	utf16_to_utf32(dst, src, ofs.nicknameLength);
 	return dst;
 }
 
 u8 *pkx_get_nickname_u8(u8* pkmn, u8* dst) {
+	u8 offset = game_is3DS() ? 0x40 : 0x48;
 	u16 src[ofs.nicknameLength];
 	for (int i = 0; i < ofs.nicknameLength; i++)
-		src[i] = *(u16*)(pkmn + 0x40 + i*2);
+		src[i] = *(u16*)(pkmn + offset + i*2);
 	utf16_to_utf8(dst, src, ofs.nicknameLength*2);
 	return dst;
 }
 
 u32 *pkx_get_ht(u8* pkmn, u32* dst) {
-	u16 src[ofs.nicknameLength];
-	memcpy(src, &pkmn[0x78], ofs.nicknameLength);
-	utf16_to_utf32(dst, src, ofs.nicknameLength);
-	return dst;
+	if (game_is3DS()) {
+		u16 src[ofs.nicknameLength];
+		memcpy(src, &pkmn[0x78], ofs.nicknameLength);
+		utf16_to_utf32(dst, src, ofs.nicknameLength);
+		return dst;
+	}
+	else
+		return pkx_get_ot(pkmn, dst);
 }
 
 u16 pkx_get_tid(u8* pkmn) {
@@ -783,12 +923,20 @@ u16 pkx_get_sid(u8* pkmn) {
 }
 
 u16 pkx_get_tsv(u8* pkmn) {
-	return (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 4;
+	if (game_is3DS())
+		return (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 4;
+	else if (game_isDS())
+		return (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 4;
+	return 0;
 }
 
 u16 pkx_get_psv(u8* pkmn) {
 	u32 pid = pkx_get_pid(pkmn);
-	return ((pid >> 16) ^ (pid & 0xFFFF)) >> 4;
+	if (game_is3DS())
+		return ((pid >> 16) ^ (pid & 0xFFFF)) >> 4;
+	else if (game_isDS())
+		return ((pid >> 16) ^ (pid & 0xFFFF)) >> 3;
+	return 0;
 }
 
 u16 pkx_get_species(u8* pkmn) {
@@ -811,13 +959,21 @@ void pkx_set_level(u8* pkmn, const int lv) {
 }
 
 bool pkx_is_shiny(u8* pkmn) {
-    u16 trainersv = (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 4;
-    u16 pkmnv = ((pkx_get_pid(pkmn) >> 16) ^ (pkx_get_pid(pkmn) & 0xFFFF)) >> 4;
+	u16 trainersv = 0x0;
+	u16 pkmnv = 0x1;
+	if (game_is3DS()) {
+		trainersv = (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 4;
+    	pkmnv = ((pkx_get_pid(pkmn) >> 16) ^ (pkx_get_pid(pkmn) & 0xFFFF)) >> 4;
+	}
+	else if (game_isDS()) {
+		trainersv = (pkx_get_tid(pkmn) ^ pkx_get_sid(pkmn)) >> 3;
+		pkmnv = (((pkx_get_pid(pkmn)) >> 16) ^ (pkx_get_pid(pkmn) & 0xFFFF)) >> 3;
+	}
 
     return trainersv == pkmnv;
 }
 
-u16 pkx_get_form_species_number(u8 *pkmn) {	
+u16 pkx_get_form_species_number(u8 *pkmn) {
 	u16 tempspecies = pkx_get_species(pkmn);
 	u8 form = pkx_get_form(pkmn);
 	u8 formcnt = personal.pkmData[tempspecies][0x0E];
@@ -849,7 +1005,7 @@ u16 pkx_get_stat(u8* pkmn, const int stat) {
     if (stat == 0)
         final = 10 + ((2 * basestat) + ((((pkx_get_HT(pkmn) >> lookupHT[stat]) & 1) == 1) ? 31 : pkx_get_iv(pkmn, stat)) + pkx_get_ev(pkmn, stat) / 4 + 100) * pkx_get_level(pkmn) / 100;
     else
-        final = 5 + (2 * basestat + ((((pkx_get_HT(pkmn) >> lookupHT[stat]) & 1) == 1) ? 31 : pkx_get_iv(pkmn, stat)) + pkx_get_ev(pkmn, stat) / 4) * pkx_get_level(pkmn) / 100; 
+        final = 5 + (2 * basestat + ((((pkx_get_HT(pkmn) >> lookupHT[stat]) & 1) == 1) ? 31 : pkx_get_iv(pkmn, stat)) + pkx_get_ev(pkmn, stat) / 4) * pkx_get_level(pkmn) / 100;
     
     if (pkx_get_nature(pkmn) / 5 + 1 == stat)
         mult++;
@@ -861,27 +1017,47 @@ u16 pkx_get_stat(u8* pkmn, const int stat) {
 }
 
 u8 pkx_get_friendship(u8* pkmn) {
-	return (pkmn[0x93] == 0) ? pkx_get_ot_friendship(pkmn) : pkx_get_ht_friendship(pkmn);
+	return (game_is3DS() && pkmn[0x93] == 0) ? pkx_get_ot_friendship(pkmn) : pkx_get_ht_friendship(pkmn);
 }
 
 u8 pkx_get_ht_friendship(u8* pkmn) {
-	return *(u8*)(pkmn + 0xA2);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xA2);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x14);  // No difference between current and original trainer friendship
+	return 0;
 }
 
 u8 pkx_get_ot_friendship(u8* pkmn) {
-	return *(u8*)(pkmn + 0xCA);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xCA);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x14);
+	return 0;
 }
 
 u8 pkx_get_nature(u8* pkmn) {
-	return *(u8*)(pkmn + 0x1C);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0x1C);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x41);
+	return 0;
 }
 
 u8 pkx_get_ev(u8* pkmn, const int stat) {
-	return *(u8*)(pkmn + 0x1E + stat);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0x1E + stat);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x18 + stat);
+	return 0;
 }
 
 u8 pkx_get_iv(u8* pkmn, const int stat) {
-    u32 buffer = *(u32*)(pkmn + 0x74);
+    u32 buffer = 0;
+    if (game_is3DS())
+    	buffer = *(u32*)(pkmn + 0x74);
+    else if (game_isDS())
+    	buffer = *(u32*)(pkmn + 0x38);
     buffer = buffer >> 5 * stat;
     buffer = buffer & 0x1F;
 	
@@ -891,27 +1067,43 @@ u8 pkx_get_iv(u8* pkmn, const int stat) {
 }
 
 u8 pkx_get_ball(u8* pkmn) {
-	return *(u8*)(pkmn + 0xDC);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xDC);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x83);
+	return 0;
 }
 
 void pkx_set_item(u8* pkmn, const u16 item) {
     memcpy(&pkmn[0x0A], &item, 2);
 }
 
-void pkx_set_gender(u8* pkmn, const u8 val) { 
-	pkmn[0x1D] = (u8)((pkmn[0x1D] & ~0x06) | (val << 1)); 
+void pkx_set_gender(u8* pkmn, const u8 val) {
+	if (game_is3DS())
+		pkmn[0x1D] = (u8)((pkmn[0x1D] & ~0x06) | (val << 1));
+	else if (game_isDS())
+		pkmn[0x40] = (u8)((pkmn[0x40] & ~0x06) | (val << 1));
 }
 
-void pkx_set_form(u8* pkmn, const u8 val) { 
-	pkmn[0x1D] = (u8)((pkmn[0x1D] & 0x07) | (val << 3)); 
+void pkx_set_form(u8* pkmn, const u8 val) {
+	if (game_is3DS())
+		pkmn[0x1D] = (u8)((pkmn[0x1D] & 0x07) | (val << 3));
+	else if (game_isDS())
+		pkmn[0x40] = (u8)((pkmn[0x40] & 0x07) | (val << 3));
 }
 
-void pkx_set_ball(u8* pkmn, const u8 val) { 
-	pkmn[0xDC] = val; 
+void pkx_set_ball(u8* pkmn, const u8 val) {
+	if (game_is3DS())
+		pkmn[0xDC] = val;
+	else if (game_isDS())
+		pkmn[0x83] = val;
 }
 
-void pkx_set_ot_gender(u8* pkmn, const u8 val) { 
-	pkx_set_flag(pkmn, 0xDD, 7, (val == 1) ? true : false); 
+void pkx_set_ot_gender(u8* pkmn, const u8 val) {
+	if (game_is3DS())
+		pkx_set_flag(pkmn, 0xDD, 7, (val == 1) ? true : false);
+	else if (game_isDS())
+		pkx_set_flag(pkmn, 0x84, 7, (val == 1) ? true : false);
 }
 
 void pkx_set_tid(u8* pkmn, const u16 tid) {
@@ -929,48 +1121,71 @@ void pkx_set_ability(u8* pkmn, const u8 ability) {
 	if (ability == 0)      abilitynum = 1;
 	else if (ability == 1) abilitynum = 2;
 	else                   abilitynum = 4;
-	
-	memcpy(&pkmn[0x15], &abilitynum, 1);
-	memcpy(&pkmn[0x14], &personal.pkmData[tempspecies][0x09 + ability], 1);
+	if (game_is3DS()) {
+		memcpy(&pkmn[0x15], &abilitynum, 1);
+		memcpy(&pkmn[0x14], &personal.pkmData[tempspecies][0x09 + ability], 1);
+	}
+	else if (game_isDS())
+		memcpy(&pkmn[0x15], &personal.pkmData[tempspecies][0x09 + ability], 1);
 }
 
 void pkx_set_move(u8* pkmn, const u16 move, const int nmove) {
-    memcpy(&pkmn[0x5A + (2 * nmove)], &move, 2);
+	if (game_is3DS())
+		memcpy(&pkmn[0x5A + (2 * nmove)], &move, 2);
+	else if (game_isDS())
+		memcpy(&pkmn[0x28 + (2 * nmove)], &move, 2);
 }
 
 void pkx_set_egg_move(u8* pkmn, const u16 move, const int nmove) {
-    memcpy(&pkmn[0x6A + (2 * nmove)], &move, 2);
+    if (game_is3DS())
+    	memcpy(&pkmn[0x6A + (2 * nmove)], &move, 2);
 }
 
 void pkx_set_ht(u8* pkmn, char* nick) {
-    memcpy(&pkmn[0x78], nick, NICKNAMELENGTH);
+	if (game_is3DS())
+		memcpy(&pkmn[0x78], nick, NICKNAMELENGTH);
 }
 
 void pkx_set_ht_gender(u8* pkmn, const u8 gender) {
-	memcpy(&pkmn[0x92], &gender, 1);
+	if (game_is3DS())
+		memcpy(&pkmn[0x92], &gender, 1);
 }
 
 void pkx_set_nature(u8* pkmn, const u8 nature) {
-    memcpy(&pkmn[0x1C], &nature, 1);
+	if (game_is3DS())
+		memcpy(&pkmn[0x1C], &nature, 1);
+	else if (game_isDS())
+		memcpy(&pkmn[0x41], &nature, 1);
 }
 
 void pkx_set_ht_friendship(u8* pkmn, const int val) {
-	memcpy(&pkmn[0xA2], &val, 1);
+	if (game_is3DS())
+		memcpy(&pkmn[0xA2], &val, 1);
 }
 
 void pkx_set_ot_friendship(u8* pkmn, const int val) {
-	memcpy(&pkmn[0xCA], &val, 1);
+	if (game_is3DS())
+		memcpy(&pkmn[0xCA], &val, 1);
+	else if (game_isDS())
+		memcpy(&pkmn[0x14], &val, 1);
 }
 
 void pkx_set_friendship(u8* pkmn, const int val) {
-	if (pkmn[0x93] == 0)
+	if (game_is3DS()) {
+		if (pkmn[0x93] == 0)
+			pkx_set_ot_friendship(pkmn, val);
+		else
+			pkx_set_ht_friendship(pkmn, val);
+	}
+	else if (game_isDS())
 		pkx_set_ot_friendship(pkmn, val);
-	else
-		pkx_set_ht_friendship(pkmn, val);
 }
 
 void pkx_set_ev(u8* pkmn, u8 val, const int stat) {
-    memcpy(&pkmn[0x1E + stat], &val, 1);
+	if (game_is3DS())
+		memcpy(&pkmn[0x1E + stat], &val, 1);
+	else if (game_isDS())
+		memcpy(&pkmn[0x18 + stat], &val, 1);
 }
 
 void pkx_set_iv(u8* pkmn, u8 val, const int stat) {
@@ -979,11 +1194,17 @@ void pkx_set_iv(u8* pkmn, u8 val, const int stat) {
 	mask ^= 0x1F << (5 * stat);
 
 	u32 buffer;
-	memcpy(&buffer, &pkmn[0x74], 4);
+	if (game_is3DS())
+		memcpy(&buffer, &pkmn[0x74], 4);
+	else if (game_isDS())
+		memcpy(&buffer, &pkmn[0x38], 4);
 
 	buffer &= mask;
 	buffer ^= ((nval & 0x1F) << (5 * stat));
-	memcpy(&pkmn[0x74], &buffer, 4);
+	if (game_is3DS())
+		memcpy(&pkmn[0x74], &buffer, 4);
+	else if (game_isDS())
+		memcpy(&pkmn[0x38], &buffer, 4);
 }
 
 void pkx_set_hp_type(u8* pkmn, const int val) {
@@ -1028,10 +1249,17 @@ void pkx_set_shiny(u8* pkmn, const bool shiny) {
 }
 
 void pkx_set_nickname_flag(u8* pkmn) {
-	u8 isnicknamed;
-	memcpy(&isnicknamed, &pkmn[0x77], 1);
-	isnicknamed |= 0x80;
-	memcpy(&pkmn[0x77], &isnicknamed, 1);
+	if (game_is3DS()) {
+		u8 isnicknamed;
+		memcpy(&isnicknamed, &pkmn[0x77], 1);
+		isnicknamed |= 0x80;
+		memcpy(&pkmn[0x77], &isnicknamed, 1);
+	}
+	else if (game_isDS()) {
+		u32 isnicknamed;
+		memcpy(&isnicknamed, &pkmn[0x38], 4);
+		isnicknamed = (isnicknamed & 0x7FFFFFFF) | 0x80000000;
+	}
 }
 
 void pkx_set_nickname(u8* pkmn, char* nick, const int dst) {
@@ -1076,7 +1304,7 @@ void pkx_set_nickname(u8* pkmn, char* nick, const int dst) {
 			break;
 	}
 
-	if (dst == 0x40 && !isGenerating()) {
+	if ((dst == 0x40 || dst == 0x48) && !isGenerating()) {
 		pkx_set_nickname_flag(pkmn);
 	}
 
@@ -1088,20 +1316,26 @@ void pkx_set_ribbons(u8* pkmn, const int ribcat, const int ribnumber, const bool
 	tmp = (u8)((tmp & ~(1 << ribnumber)) | (value ? 1 << ribnumber : 0));
 	memcpy(&pkmn[0x30 + ribcat], &tmp, 1);
 }
-
+//TODO implement ribbon shit
 bool pkx_get_ribbons(u8* pkmn, const int ribcat, const int ribnumber) {
-	return (pkmn[0x30 + ribcat] & (1 << ribnumber)) == 1 << ribnumber;
+	if (game_is3DS())
+		return (pkmn[0x30 + ribcat] & (1 << ribnumber)) == 1 << ribnumber;
+	return false;
 }
 
 void pkx_set_hti(u8* pkmn, const int htnumber, const bool value) {
-	// HyperTrains htnumber HP,ATK,SPATK,SPDEF,SPEED
-	u8 tmp = *(u8*)(pkmn + 0xDE);
-	tmp = (u8)((tmp & ~(1 << htnumber)) | (value ? 1 << htnumber : 0));
-	memcpy(&pkmn[0xDE], &tmp, 1);
+	if (game_is3DS()) {
+		// HyperTrains htnumber HP,ATK,SPATK,SPDEF,SPEED
+		u8 tmp = *(u8*)(pkmn + 0xDE);
+		tmp = (u8)((tmp & ~(1 << htnumber)) | (value ? 1 << htnumber : 0));
+		memcpy(&pkmn[0xDE], &tmp, 1);
+	}
 }
 
 bool pkx_get_hti(u8* pkmn, const int htnumber) {
-	return (pkmn[0xDE] & (1 << htnumber)) == 1 << htnumber;
+	if (game_is3DS())
+		return (pkmn[0xDE] & (1 << htnumber)) == 1 << htnumber;
+	return false;
 }
 
 void pkx_set_flag(u8* pkmn, const int flgaddr, const int flgshift, const bool value) {
@@ -1114,11 +1348,18 @@ void pkx_set_flag(u8* pkmn, const int flgaddr, const int flgshift, const bool va
 }
 
 void pkx_set_pokerus(u8* pkmn) {
-	*(pkmn + 0x2B) = 0x11;
+	if (game_is3DS())
+		*(pkmn + 0x2B) = 0x11;
+	else if (game_isDS())
+		*(pkmn + 0x82) = 0x11;
 }
 
 u8 pkx_get_version(u8* pkmn) {
-	return *(u8*)(pkmn + 0xDF);
+	if (game_is3DS())
+		return *(u8*)(pkmn + 0xDF);
+	else if (game_isDS())
+		return *(u8*)(pkmn + 0x5F);
+	return 0;
 }
 
 bool pkx_is_valid(u8* pkmn)

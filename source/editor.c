@@ -202,9 +202,9 @@ void generate(u8* mainbuf, bool isTeam, int box, int currentEntry, int page, int
 	fread(livingbuf, size, 1, fptr);
 	fclose(fptr);
 
-	memcpy(&mainbuf[pkx_get_save_address((isTeam) ? 33 : box, currentEntry)], &livingbuf[(page * 40 + genEntry) * ofs.pkmnLength], ofs.pkmnLength);
+	memcpy(&mainbuf[pkx_get_save_address((isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry)], &livingbuf[(page * 40 + genEntry) * ofs.pkmnLength], ofs.pkmnLength);
 	u8 tempkmn[ofs.pkmnLength];
-	pkx_get(mainbuf, (isTeam) ? 33 : box, currentEntry, tempkmn);
+	pkx_get(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, tempkmn);
 	memcpy(&tempkmn[0xE3], &mainbuf[ofs.saveLanguage], 1); // nats
 
 	// Correct Nickname of current language
@@ -218,7 +218,8 @@ void generate(u8* mainbuf, bool isTeam, int box, int currentEntry, int page, int
 	utf32_to_utf8((unsigned char*)nick, (uint32_t*)listSpecies.items[pkx_get_species(tempkmn)], ofs.nicknameLength);
 	nick[ofs.nicknameLength - 1] = '\0';
 
-	pkx_set_nickname(tempkmn, nick, 0x40);
+	if (game_is3DS()) pkx_set_nickname(tempkmn, nick, 0x40);
+	else if (game_isDS()) pkx_set_nickname(tempkmn, nick, 0x48);
 
 	// Randomizing the encryption constant
 	pkx_reroll_encryption_key(tempkmn);
@@ -229,7 +230,7 @@ void generate(u8* mainbuf, bool isTeam, int box, int currentEntry, int page, int
 	tempkmn[0xD6] = PKSM_Configuration.defaultDay;
 	
 	setDex(mainbuf, tempkmn);
-	pkx_set(mainbuf, (isTeam) ? 33 : box, currentEntry, tempkmn);
+	pkx_set(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, tempkmn);
 
 	free(livingbuf);
 	generating = false;
@@ -400,7 +401,7 @@ void pokemonEditor(u8* mainbuf) {
 		if (((hidKeysDown() & KEY_A) || touchExecuting / 40 == 2) && !isBattleBoxed(mainbuf, box, currentEntry)) {
 			touchExecuting = currentEntry;
 
-			pkx_get(mainbuf, (isTeam) ? 33 : box, currentEntry, pkmn);
+			pkx_get(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, pkmn);
 			bool operationDone = false;
 
 			touchExecuting = menuEntry;
@@ -435,10 +436,11 @@ void pokemonEditor(u8* mainbuf) {
 						getSaveOT(mainbuf, ot32);
 						utf32_to_utf8(ot, ot32, ofs.nicknameLength);
 
-						pkx_set_nickname(pkmn, (char*)ot, 0xB0);
+						if (game_is3DS()) pkx_set_nickname(pkmn, (char*)ot, 0xB0);
+						else if (game_isDS()) pkx_set_nickname(pkmn, (char*)ot, 0x68);
 						pkx_set_ot_gender(pkmn, (getSaveGender(mainbuf)));
 
-						pkx_set(mainbuf, (isTeam) ? 33 : box, currentEntry, pkmn);
+						pkx_set(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, pkmn);
 						operationDone = true;
 						break;
 					}
@@ -773,8 +775,10 @@ void pokemonEditor(u8* mainbuf) {
 										button = swkbdInputText(&swkbd, nick, ofs.nicknameLength);
 										nick[ofs.nicknameLength - 1] = '\0';
 
-										if (button != SWKBD_BUTTON_NONE)
-											pkx_set_nickname(pkmn, nick, 0x40);
+										if (button != SWKBD_BUTTON_NONE) {
+											if (game_is3DS()) pkx_set_nickname(pkmn, nick, 0x40);
+											else if (game_isDS()) pkx_set_nickname(pkmn, nick, 0x48);
+										}
 									}
 									
 									if (touch.px > 180 && touch.px < 195 && touch.py > 151 && touch.py < 163) {
@@ -793,12 +797,14 @@ void pokemonEditor(u8* mainbuf) {
 										button = swkbdInputText(&swkbd, nick, ofs.nicknameLength);
 										nick[ofs.nicknameLength - 1] = '\0';
 
-										if (button != SWKBD_BUTTON_NONE)
-											pkx_set_nickname(pkmn, nick, 0xb0);
+										if (button != SWKBD_BUTTON_NONE) {
+											if (game_is3DS()) pkx_set_nickname(pkmn, nick, 0xB0);
+											else if (game_isDS()) pkx_set_nickname(pkmn, nick, 0x68);
+										}
 									}
 									
 									if (touch.px > 206 && touch.px < 315 && touch.py > 172 && touch.py < 203) {
-										pkx_set_as_it_is(mainbuf, (isTeam) ? 33 : box, currentEntry, pkmn);
+										pkx_set_as_it_is(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, pkmn);
 										operationDone = true;
 										break;
 									}
