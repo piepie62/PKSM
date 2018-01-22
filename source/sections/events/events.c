@@ -90,7 +90,7 @@ void reloadPreviewBuf(u8* previewBuf, const int i, const int n)
 		getSinglePathPGT(testpath, n, i);
 	}
 	
-	const u16 wcSize = ofs.wondercardSize;
+	const u16 wcSize = perGameOffsets.wondercardSize;
 	FILE* f = fopen(testpath, "r");
 	if (f)
 	{ 
@@ -126,7 +126,7 @@ void reloadMultiplePreviewBuf(u8* previewBuf, const int i, const int n, const in
 		return;
 	}
 	
-	const u16 wcSize = ofs.wondercardSize;
+	const u16 wcSize = perGameOffsets.wondercardSize;
 	FILE* f = fopen(testpath, "r");
 	if (f)
 	{ 
@@ -155,20 +155,20 @@ int getFreeLocationWC(u8 *mainbuf)
 
 	u8 t;
 	int temp;
-	for (t = 0; t < ofs.maxWondercards; t++)
+	for (t = 0; t < perGameOffsets.maxWondercards; t++)
 	{
 		temp = 0;
-		for (u32 j = 0; j < ofs.wondercardSize; j++)
-			if (*(mainbuf + ofs.wondercardLocation + t * ofs.wondercardSize + j) == 0x00)
+		for (u32 j = 0; j < perGameOffsets.wondercardSize; j++)
+			if (*(mainbuf + perGameOffsets.wondercardLocation + t * perGameOffsets.wondercardSize + j) == 0x00)
 				temp++;
 
-		if (temp == ofs.wondercardSize)
+		if (temp == perGameOffsets.wondercardSize)
 		{
 			break;
 		}
 	}
 	
-	return t == 0 ? ofs.maxWondercards - 1 : t;
+	return t == 0 ? perGameOffsets.maxWondercards - 1 : t;
 }
 
 void findFreeLocationWC(u8 *mainbuf, int nInjected[])
@@ -230,7 +230,7 @@ int getN(const int i)
 
 void eventDatabase(u8* mainbuf) {
 	const u32 dbCount = game_is3DS() ? SMCOUNT : (game_isgen5() ? 170 : 190);
-	const u16 wcSize = ofs.wondercardSize;
+	const u16 wcSize = perGameOffsets.wondercardSize;
 	
 	char *database[dbCount];
 	int *spriteArray = (int*)malloc(dbCount * sizeof(int));
@@ -421,7 +421,7 @@ void eventDatabase(u8* mainbuf) {
 					{
 						int max = getFreeLocationWC(mainbuf);
 						int entry = 0;
-						int page = 0, maxpages = ofs.maxWondercards / 40 + 1;
+						int page = 0, maxpages = perGameOffsets.maxWondercards / 40 + 1;
 						while(aptMainLoop() && !(hidKeysDown() & KEY_B))
 						{
 							hidScanInput();
@@ -430,11 +430,11 @@ void eventDatabase(u8* mainbuf) {
 							
 							if (hidKeysDown() & KEY_X)
 							{
-								u8 empty[ofs.wondercardSize];
-								memset(empty, 0, ofs.wondercardSize);
-								u8 tmp[ofs.wondercardSize];
-								memcpy(tmp, mainbuf + ofs.wondercardLocation + entry*ofs.wondercardSize, ofs.wondercardSize);
-								if (memcmp(tmp, empty, ofs.wondercardSize))
+								u8 empty[perGameOffsets.wondercardSize];
+								memset(empty, 0, perGameOffsets.wondercardSize);
+								u8 tmp[perGameOffsets.wondercardSize];
+								memcpy(tmp, mainbuf + perGameOffsets.wondercardLocation + entry*perGameOffsets.wondercardSize, perGameOffsets.wondercardSize);
+								if (memcmp(tmp, empty, perGameOffsets.wondercardSize))
 								{
 									u8 title[72] = {0};
 									char path[150] = {0};
@@ -459,7 +459,7 @@ void eventDatabase(u8* mainbuf) {
 									mkdir(dmppath, 777);
 									chdir(dmppath);
 
-									file_write(path, tmp, ofs.wondercardSize);
+									file_write(path, tmp, perGameOffsets.wondercardSize);
 									infoDisp(i18n(S_EXTRACTED));
 								}
 							}
@@ -560,7 +560,7 @@ void eventDatabase(u8* mainbuf) {
 					}
 					
 					// reached last slot, reset the slot to 0
-					if (nInjected[0] >= ofs.maxWondercards)
+					if (nInjected[0] >= perGameOffsets.maxWondercards)
 					{
 						nInjected[0] = 0;
 					}

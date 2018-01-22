@@ -102,7 +102,7 @@ int socket_init()
 		return 0;
 	}
 	
-	payloadSize = ofs.pkxLength * maxPkxPerSocket + 7;
+	payloadSize = perGameOffsets.pkxLength * maxPkxPerSocket + 7;
 	payload = (char*)malloc(payloadSize);
 	if (payload == NULL)
 	{
@@ -153,7 +153,7 @@ void process_pkx(u8* mainbuf, int tempVett[])
 	else
 	{
 		panic = 0;
-		int boxmax = ofs.maxBoxes - 1;
+		int boxmax = perGameOffsets.maxBoxes - 1;
 		memset(payload, 0, payloadSize);
 
 		fcntl(server.client_id, F_SETFL, fcntl(server.client_id, F_GETFL, 0) & ~O_NONBLOCK);
@@ -162,14 +162,14 @@ void process_pkx(u8* mainbuf, int tempVett[])
 		char* pointer = strstr(payload, "PKSMOTA");
         if (pointer != NULL && (hidKeysDown() != KEY_B))
 		{
-			u8 blank[ofs.pkxLength];
-			memset(blank, 0, ofs.pkxLength);
+			u8 blank[perGameOffsets.pkxLength];
+			memset(blank, 0, perGameOffsets.pkxLength);
 			int counter = 0;
 			while (counter >= 0 && counter < maxPkxPerSocket)
 			{
-				u8 pkmn[ofs.pkxLength];
-				memcpy(pkmn, pointer + 7 + counter*ofs.pkxLength, ofs.pkxLength);
-				if (memcmp(pkmn, blank, ofs.pkxLength) == 0)
+				u8 pkmn[perGameOffsets.pkxLength];
+				memcpy(pkmn, pointer + 7 + counter*perGameOffsets.pkxLength, perGameOffsets.pkxLength);
+				if (memcmp(pkmn, blank, perGameOffsets.pkxLength) == 0)
 				{
 					counter = -1;
 				}
@@ -214,11 +214,11 @@ void process_pkx(u8* mainbuf, int tempVett[])
 void processLegality(u8* pkmn)
 {
 	u8 gameVersion = game_isgen7() ? 7 : 6;
-	char message[ofs.pkmnLength + 8];
+	char message[perGameOffsets.pkmnLength + 8];
 	const char* prefix = "PKSMOTA";
 	memcpy(message, prefix, 7);
 	memcpy(message + 7, &gameVersion, 1);
-	memcpy(message + 8, pkmn, ofs.pkmnLength);
+	memcpy(message + 8, pkmn, perGameOffsets.pkmnLength);
 
 	struct sockaddr_in legalityServer;
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -241,7 +241,7 @@ void processLegality(u8* pkmn)
 	}
 	
 	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
-	if (send(sock, message, ofs.pkmnLength + 7 + 1, 0) < 0)
+	if (send(sock, message, perGameOffsets.pkmnLength + 7 + 1, 0) < 0)
 	{
 		close(sock);
 		infoDisp(i18n(S_SOCKET_SEND_FAILED));
@@ -272,15 +272,15 @@ void process_bank(u8* buf)
 		char* pointer = strstr(payload, "PKSMOTA");
         if (pointer != NULL && (hidKeysDown() != KEY_B))
 		{
-			u8 blank[ofs.pkxLength];
-			memset(blank, 0, ofs.pkxLength);
+			u8 blank[perGameOffsets.pkxLength];
+			memset(blank, 0, perGameOffsets.pkxLength);
 			
 			int counter = 0;
 			while (counter >= 0 && counter < maxPkxPerSocket)
 			{
-				u8 pkmn[ofs.pkxLength];
-				memcpy(pkmn, pointer + 7 + counter*ofs.pkxLength, ofs.pkxLength);
-				if (memcmp(pkmn, blank, ofs.pkxLength) == 0)
+				u8 pkmn[perGameOffsets.pkxLength];
+				memcpy(pkmn, pointer + 7 + counter*perGameOffsets.pkxLength, perGameOffsets.pkxLength);
+				if (memcmp(pkmn, blank, perGameOffsets.pkxLength) == 0)
 				{
 					counter = -1;
 				}
@@ -289,7 +289,7 @@ void process_bank(u8* buf)
 					counter++;
 					if (pkx_is_valid(pkmn))
 					{
-						memcpy(&buf[slot*ofs.pkxLength], pkmn, ofs.pkxLength);
+						memcpy(&buf[slot*perGameOffsets.pkxLength], pkmn, perGameOffsets.pkxLength);
 						slot++;							
 					}
 				}

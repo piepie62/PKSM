@@ -217,7 +217,7 @@ void update_qr(qr_data *data, u8* payload, int mode)
 				static const int headerSize = strlen("http://lunarcookies.github.io/wc.html#");
 				unsigned char* out = base64_decode((char*)scan_data.payload + headerSize, scan_data.payload_len - headerSize, &outlen);
 
-				if (outlen == ofs.wondercardSize)
+				if (outlen == perGameOffsets.wondercardSize)
 				{
 					memcpy(payload, out, outlen);
 				}
@@ -237,9 +237,9 @@ void update_qr(qr_data *data, u8* payload, int mode)
 				// TODO: check checksums
 				for (u32 i = 0; i < copies; i++)
 				{
-					if (startaddress < ofs.boxSize)
+					if (startaddress < perGameOffsets.boxSize)
 					{
-						memcpy(payload + startaddress + i*ofs.pkxLength, scan_data.payload + 0x30, ofs.pkxLength);
+						memcpy(payload + startaddress + i*perGameOffsets.pkxLength, scan_data.payload + 0x30, perGameOffsets.pkxLength);
 					}
 				}
 			}

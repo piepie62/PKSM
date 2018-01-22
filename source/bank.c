@@ -86,11 +86,11 @@ bool bank_getIsInternetWorking() {
 }
 
 inline void setToWirelessBuf(u8* buf, int box, int slot, u8* pkmn) {
-	memcpy(&buf[box*30*ofs.pkxLength + slot*ofs.pkxLength], pkmn, ofs.pkxLength);
+	memcpy(&buf[box*30*perGameOffsets.pkxLength + slot*perGameOffsets.pkxLength], pkmn, perGameOffsets.pkxLength);
 }
 
 inline void getFromWirelessBuf(u8* buf, int box, int slot, u8* pkmn) {
-	memcpy(pkmn, &buf[box*30*ofs.pkxLength + slot*ofs.pkxLength], ofs.pkxLength);
+	memcpy(pkmn, &buf[box*30*perGameOffsets.pkxLength + slot*perGameOffsets.pkxLength], perGameOffsets.pkxLength);
 }
 
 void clearMarkings(u8* pkmn) {
@@ -134,17 +134,17 @@ void dumpPkx(u8* buf, int box, int slot)
 	mkdir(dmppath, 777);
 	chdir(dmppath);
 	
-	u8 tmp[ofs.pkxLength];
+	u8 tmp[perGameOffsets.pkxLength];
 	if (isbank)
 	{
-		memcpy(tmp, buf + box*30*ofs.pkxLength + slot*ofs.pkxLength, ofs.pkxLength);
+		memcpy(tmp, buf + box*30*perGameOffsets.pkxLength + slot*perGameOffsets.pkxLength, perGameOffsets.pkxLength);
 	}
 	else
 	{
 		pkx_get(buf, box, slot, tmp);
 	}
 	
-	if (pkx_get_species(tmp) > 0 && pkx_get_species(tmp) < ofs.totalSpecies)
+	if (pkx_get_species(tmp) > 0 && pkx_get_species(tmp) < perGameOffsets.totalSpecies)
 	{
 		char path[100] = {0};
 		u8 nick[26*2] = {0};
@@ -152,7 +152,7 @@ void dumpPkx(u8* buf, int box, int slot)
 		pkx_get_nickname_u8(tmp, nick);
 		sprintf(path, "%d - %s - %X.pk7", (int)pkx_get_species(tmp), nick, (int)pkx_get_pid(tmp));
 
-		file_write(path, tmp, ofs.pkxLength);
+		file_write(path, tmp, perGameOffsets.pkxLength);
 		infoDisp(i18n(S_EXTRACTED));
 	}
 }
@@ -171,7 +171,7 @@ void bank(u8* mainbuf) {
 	fseek(fptr, 0, SEEK_END);
 	int size = ftell(fptr);
 	
-	if (size % (30 * ofs.pkxLength)) {
+	if (size % (30 * perGameOffsets.pkxLength)) {
 		fclose(fptr);
 		infoDisp(i18n(S_BANK_SIZE_ERROR));
 		return;
@@ -195,12 +195,12 @@ void bank(u8* mainbuf) {
 	int currentEntry = 30;
 	int coordinate[2] = {0, 0};
 	
-	u8* wirelessbuf = (u8*)malloc(30*232*ofs.maxBoxes);
-	memset(wirelessbuf, 0, 30*232*ofs.maxBoxes);
+	u8* wirelessbuf = (u8*)malloc(30*232*perGameOffsets.maxBoxes);
+	memset(wirelessbuf, 0, 30*232*perGameOffsets.maxBoxes);
 	bool isWirelessBuffer = false;
 	
-	u8* pkmn = (u8*)malloc(ofs.pkxLength * sizeof(u8));
-	memset(pkmn, 0, ofs.pkxLength);
+	u8* pkmn = (u8*)malloc(perGameOffsets.pkxLength * sizeof(u8));
+	memset(pkmn, 0, perGameOffsets.pkxLength);
 	
 	bank_free_multiple_selection_buffer();
 	
@@ -212,14 +212,14 @@ void bank(u8* mainbuf) {
 
 		if (speed >= -30 && (hidKeysDown() & KEY_R)) {
 			if (currentEntry < 30) {
-				if (bankBox < size / (30 * ofs.pkxLength) - 1) 
+				if (bankBox < size / (30 * perGameOffsets.pkxLength) - 1) 
 					bankBox++;
-				else if (bankBox == size / (30 * ofs.pkxLength) - 1) 
+				else if (bankBox == size / (30 * perGameOffsets.pkxLength) - 1) 
 					bankBox = 0;
 			} else {
-				if (saveBox < ofs.maxBoxes - 1) 
+				if (saveBox < perGameOffsets.maxBoxes - 1) 
 					saveBox++;
-				else if (saveBox == ofs.maxBoxes - 1)
+				else if (saveBox == perGameOffsets.maxBoxes - 1)
 					saveBox = 0;
 			}
 		}
@@ -229,12 +229,12 @@ void bank(u8* mainbuf) {
 				if (bankBox > 0) 
 					bankBox--;
 				else if (bankBox == 0) 
-					bankBox = size / (30 * ofs.pkxLength) - 1;
+					bankBox = size / (30 * perGameOffsets.pkxLength) - 1;
 			} else {
 				if (saveBox > 0) 
 					saveBox--;
 				else if (saveBox == 0) 
-					saveBox = ofs.maxBoxes - 1;	
+					saveBox = perGameOffsets.maxBoxes - 1;	
 			}
 		}
 		
@@ -243,14 +243,14 @@ void bank(u8* mainbuf) {
 		else if (hidKeysHeld() & KEY_R) {
 			if (speed > 30) {
 				if (currentEntry < 30) {
-					if (bankBox < size / (30 * ofs.pkxLength) - 1) 
+					if (bankBox < size / (30 * perGameOffsets.pkxLength) - 1) 
 						bankBox++;
-					else if (bankBox == size / (30 * ofs.pkxLength) - 1) 
+					else if (bankBox == size / (30 * perGameOffsets.pkxLength) - 1) 
 						bankBox = 0;
 				} else {
-					if (saveBox < ofs.maxBoxes - 1) 
+					if (saveBox < perGameOffsets.maxBoxes - 1) 
 						saveBox++;
-					else if (saveBox == ofs.maxBoxes - 1) 
+					else if (saveBox == perGameOffsets.maxBoxes - 1) 
 						saveBox = 0;
 				}
 			}
@@ -263,12 +263,12 @@ void bank(u8* mainbuf) {
 					if (bankBox > 0) 
 						bankBox--;
 					else if (bankBox == 0) 
-						bankBox = size / (30 * ofs.pkxLength) - 1;
+						bankBox = size / (30 * perGameOffsets.pkxLength) - 1;
 				} else {
 					if (saveBox > 0) 
 						saveBox--;
 					else if (saveBox == 0) 
-						saveBox = ofs.maxBoxes - 1;	
+						saveBox = perGameOffsets.maxBoxes - 1;	
 				}
 			}
 			else
@@ -278,9 +278,9 @@ void bank(u8* mainbuf) {
 			speed = 0;
 
 		if (zSpeed >= -30 && (hidKeysDown() & KEY_ZR)) {
-			if (bankBox < size / (30 * ofs.pkxLength) - 1) 
+			if (bankBox < size / (30 * perGameOffsets.pkxLength) - 1) 
 				bankBox++;
-			else if (bankBox == size / (30 * ofs.pkxLength) - 1) 
+			else if (bankBox == size / (30 * perGameOffsets.pkxLength) - 1) 
 				bankBox = 0;
 		}
 		
@@ -288,16 +288,16 @@ void bank(u8* mainbuf) {
 			if (bankBox > 0) 
 				bankBox--;
 			else if (bankBox == 0) 
-				bankBox = size / (30 * ofs.pkxLength) - 1;
+				bankBox = size / (30 * perGameOffsets.pkxLength) - 1;
 		}
 		
 		if (hidKeysHeld() & KEY_ZR && hidKeysHeld() & KEY_ZL)
 			zSpeed = 0;
 		else if (hidKeysHeld() & KEY_ZR) {
 			if (zSpeed > 30) {
-				if (bankBox < size / (30 * ofs.pkxLength) - 1) 
+				if (bankBox < size / (30 * perGameOffsets.pkxLength) - 1) 
 					bankBox++;
-				else if (bankBox == size / (30 * ofs.pkxLength) - 1) 
+				else if (bankBox == size / (30 * perGameOffsets.pkxLength) - 1) 
 					bankBox = 0;
 			}
 			else
@@ -308,7 +308,7 @@ void bank(u8* mainbuf) {
 				if (bankBox > 0) 
 					bankBox--;
 				else if (bankBox == 0) 
-					bankBox = size / (30 * ofs.pkxLength) - 1;
+					bankBox = size / (30 * perGameOffsets.pkxLength) - 1;
 			}
 			else
 				zSpeed--;
@@ -333,13 +333,13 @@ void bank(u8* mainbuf) {
 		if (hidKeysDown() & KEY_B) {
 			if (isBufferized) {
 				if (bufferizedfrombank)
-					memcpy(&bankbuf[coordinate[0] * 30 * ofs.pkxLength + coordinate[1] * ofs.pkxLength], pkmn, ofs.pkxLength);
+					memcpy(&bankbuf[coordinate[0] * 30 * perGameOffsets.pkxLength + coordinate[1] * perGameOffsets.pkxLength], pkmn, perGameOffsets.pkxLength);
 				else if (!isWirelessBuffer)
 					pkx_set_as_it_is(mainbuf, coordinate[0], coordinate[1], pkmn);
 				else if (isWirelessBuffer)
 					setToWirelessBuf(wirelessbuf, coordinate[0], coordinate[1], pkmn);
 				
-				memset(pkmn, 0, ofs.pkxLength);
+				memset(pkmn, 0, perGameOffsets.pkxLength);
 				isBufferized = false;
 			} else
 				break;
@@ -350,23 +350,23 @@ void bank(u8* mainbuf) {
 				if (saveBox > 0) 
 					saveBox--;
 				else if (saveBox == 0) 
-					saveBox = ofs.maxBoxes - 1;
+					saveBox = perGameOffsets.maxBoxes - 1;
 			}
 			
 			if (touch.px > 185 && touch.px < 201 && touch.py > 17 && touch.py < 37) {
-				if (saveBox < ofs.maxBoxes - 1) 
+				if (saveBox < perGameOffsets.maxBoxes - 1) 
 					saveBox++;
-				else if (saveBox == ofs.maxBoxes - 1) 
+				else if (saveBox == perGameOffsets.maxBoxes - 1) 
 					saveBox = 0;
 			}
 			
 			if ((touch.px > 208 && touch.px < 317 && touch.py > 72 && touch.py < 99) && !(isBufferized)) {
 				if (confirmDisp(i18n(S_BANK_Q_ERASE_SELECTED_BOX))) {
-					u8 tmp[ofs.pkxLength];
-					memset(tmp, 0, ofs.pkxLength);
+					u8 tmp[perGameOffsets.pkxLength];
+					memset(tmp, 0, perGameOffsets.pkxLength);
 					for (u32 i = 0; i < 30; i++) {
 						if (currentEntry < 30)
-							memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + i * ofs.pkxLength], tmp, ofs.pkxLength);
+							memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + i * perGameOffsets.pkxLength], tmp, perGameOffsets.pkxLength);
 						else if (!isBattleBoxed(mainbuf, saveBox, i) && !isWirelessBuffer)
 							pkx_set_as_it_is(mainbuf, saveBox, i, tmp);
 						else if (isWirelessBuffer)
@@ -376,42 +376,42 @@ void bank(u8* mainbuf) {
 			}
 			
 			if (touch.px > 242 && touch.px < 285 && touch.py > 5 && touch.py < 25) {
-				u8 buffer[ofs.pkxLength];
-				u8 temp[ofs.pkxLength];
-				memset(buffer, 0, ofs.pkxLength);
-				memset(temp, 0, ofs.pkxLength);
+				u8 buffer[perGameOffsets.pkxLength];
+				u8 temp[perGameOffsets.pkxLength];
+				memset(buffer, 0, perGameOffsets.pkxLength);
+				memset(temp, 0, perGameOffsets.pkxLength);
 				
 				for (u32 i = 0; i < 30; i++) {
 					if (!isBattleBoxed(mainbuf, saveBox, i) && !isWirelessBuffer) {
 						pkx_get(mainbuf, saveBox, i, buffer); // pkx_get -> buffer
-						memcpy(temp, &bankbuf[bankBox * 30 * ofs.pkxLength + i * ofs.pkxLength], ofs.pkxLength); // memcpy bank -> temp
+						memcpy(temp, &bankbuf[bankBox * 30 * perGameOffsets.pkxLength + i * perGameOffsets.pkxLength], perGameOffsets.pkxLength); // memcpy bank -> temp
 						
 						u16 species = pkx_get_species(temp);
 						u8 form = pkx_get_form(temp);
 						FormData *forms = pkx_get_legal_form_data(species, game);
 						bool illegalform = form < forms->min || (form > forms->max && checkUSUMexceptions(species));
-						bool illegalspecies = species > ofs.maxSpecies;
+						bool illegalspecies = species > perGameOffsets.maxSpecies;
 						free(forms);
 
 						if (!(illegalspecies || illegalform)) { // prevent that gen7 stuff goes into gen6 save
 							setDex(mainbuf, temp);
 							pkx_set(mainbuf, saveBox, i, temp); // pkx_set -> temp
-							memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + i * ofs.pkxLength], buffer, ofs.pkxLength); // memcpy bank -> buffer
+							memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + i * perGameOffsets.pkxLength], buffer, perGameOffsets.pkxLength); // memcpy bank -> buffer
 						}
 					} else if (isWirelessBuffer) {
 						getFromWirelessBuf(wirelessbuf, saveBox, i, buffer); // pkx_get -> buffer
-						memcpy(temp, &bankbuf[bankBox * 30 * ofs.pkxLength + i * ofs.pkxLength], ofs.pkxLength); // memcpy bank -> temp
+						memcpy(temp, &bankbuf[bankBox * 30 * perGameOffsets.pkxLength + i * perGameOffsets.pkxLength], perGameOffsets.pkxLength); // memcpy bank -> temp
 						setToWirelessBuf(wirelessbuf, saveBox, i, temp); // pkx_set -> temp
-						memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + i * ofs.pkxLength], buffer, ofs.pkxLength); // memcpy bank -> buffer						
+						memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + i * perGameOffsets.pkxLength], buffer, perGameOffsets.pkxLength); // memcpy bank -> buffer						
 					}
 				}
 			}
 			
 			if ((touch.px > 208 && touch.px < 317 && touch.py > 100 && touch.py < 129) && !(isBufferized)) {
-				u8 tmp[ofs.pkxLength];
-				memset(tmp, 0, ofs.pkxLength);
+				u8 tmp[perGameOffsets.pkxLength];
+				memset(tmp, 0, perGameOffsets.pkxLength);
 				if (currentEntry < 30) 
-					memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], tmp, ofs.pkxLength);
+					memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], tmp, perGameOffsets.pkxLength);
 				else if (!isBattleBoxed(mainbuf, saveBox, currentEntry - 30) && !isWirelessBuffer)
 					pkx_set_as_it_is(mainbuf, saveBox, currentEntry - 30, tmp);
 				else if (isWirelessBuffer)
@@ -443,11 +443,11 @@ void bank(u8* mainbuf) {
 		
 		if (((hidKeysDown() & KEY_X) || (hidKeysDown() & KEY_TOUCH && touch.px > 208 && touch.px < 317 && touch.py > 43 && touch.py < 74)) && !isBufferized) {
 			isSeen = true;
-			u8 tmp[ofs.pkxLength];
-			memset(tmp, 0, ofs.pkxLength);
+			u8 tmp[perGameOffsets.pkxLength];
+			memset(tmp, 0, perGameOffsets.pkxLength);
 			
 			if (currentEntry < 30)
-				memcpy(tmp, &bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], ofs.pkxLength);
+				memcpy(tmp, &bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], perGameOffsets.pkxLength);
 			else if (!isWirelessBuffer)
 				pkx_get(mainbuf, saveBox, currentEntry - 30, tmp);
 			else if (isWirelessBuffer)
@@ -473,16 +473,16 @@ void bank(u8* mainbuf) {
 				u8 form = pkx_get_form(pkmn);
 				FormData *forms = pkx_get_legal_form_data(species, game);
 				bool illegalform = form < forms->min || (form > forms->max && checkUSUMexceptions(species));
-				bool illegalspecies = species > ofs.maxSpecies;
+				bool illegalspecies = species > perGameOffsets.maxSpecies;
 				free(forms);
 
 				if (isWirelessBuffer || !((illegalspecies || illegalform) && currentEntry > 29)) { // prevent that gen7 stuff goes into gen6 save
-					u8 tmp[ofs.pkxLength];
+					u8 tmp[perGameOffsets.pkxLength];
 					
 					if ((bufferizedfrombank == (currentEntry < 30)) && (coordinate[0] == ((currentEntry < 30) ? bankBox : saveBox)) && (coordinate[1] == currentEntry)) {
 						//remains at the same place
-						memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], pkmn, ofs.pkxLength);
-						memset(pkmn, 0, ofs.pkxLength);
+						memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], pkmn, perGameOffsets.pkxLength);
+						memset(pkmn, 0, perGameOffsets.pkxLength);
 						isBufferized = false;
 					}
 					else if ((!bufferizedfrombank == (currentEntry > 29)) && (coordinate[0] == ((currentEntry < 30) ? bankBox : saveBox)) && (coordinate[1] == currentEntry - 30)) {
@@ -491,27 +491,27 @@ void bank(u8* mainbuf) {
 							pkx_set_as_it_is(mainbuf, saveBox, currentEntry - 30, pkmn);
 						else if (isWirelessBuffer)
 							setToWirelessBuf(wirelessbuf, saveBox, currentEntry - 30, pkmn);
-						memset(pkmn, 0, ofs.pkxLength);
+						memset(pkmn, 0, perGameOffsets.pkxLength);
 						isBufferized = false;
 					}
 					else if (currentEntry < 30) {
-						memcpy(tmp, &bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], ofs.pkxLength);
+						memcpy(tmp, &bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], perGameOffsets.pkxLength);
 						
 						u16 tmpspecies = pkx_get_species(tmp);
 						FormData *forms = pkx_get_legal_form_data(tmpspecies, game);
 						u8 tmpform = pkx_get_form(tmp);
 						bool tmpillegalform = tmpform < forms->min || (tmpform > forms->max && checkUSUMexceptions(tmpspecies));
-						bool tmpillegalspecies = tmpspecies > ofs.maxSpecies;
+						bool tmpillegalspecies = tmpspecies > perGameOffsets.maxSpecies;
 						free(forms);
 						if (!(tmpillegalspecies || tmpillegalform)) { // check to make sure not swapping gen 7 stuff into gen 6
-							memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], pkmn, ofs.pkxLength);
+							memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], pkmn, perGameOffsets.pkxLength);
 							if (bufferizedfrombank) 
-								memcpy(&bankbuf[coordinate[0] * 30 * ofs.pkxLength + coordinate[1] * ofs.pkxLength], tmp, ofs.pkxLength);
+								memcpy(&bankbuf[coordinate[0] * 30 * perGameOffsets.pkxLength + coordinate[1] * perGameOffsets.pkxLength], tmp, perGameOffsets.pkxLength);
 							else if (!isWirelessBuffer)
 								pkx_set(mainbuf, coordinate[0], coordinate[1], tmp);
 							else if (isWirelessBuffer)
 								setToWirelessBuf(wirelessbuf, coordinate[0], coordinate[1], tmp);
-							memset(pkmn, 0, ofs.pkxLength);
+							memset(pkmn, 0, perGameOffsets.pkxLength);
 							isBufferized = false;
 						}
 					}
@@ -527,32 +527,32 @@ void bank(u8* mainbuf) {
 						}
 
 						if (bufferizedfrombank) 
-							memcpy(&bankbuf[coordinate[0] * 30 * ofs.pkxLength + coordinate[1] * ofs.pkxLength], tmp, ofs.pkxLength);
+							memcpy(&bankbuf[coordinate[0] * 30 * perGameOffsets.pkxLength + coordinate[1] * perGameOffsets.pkxLength], tmp, perGameOffsets.pkxLength);
 						else if (!isWirelessBuffer)
 							pkx_set(mainbuf, coordinate[0], coordinate[1], tmp);
 						else if (isWirelessBuffer)
 							setToWirelessBuf(wirelessbuf, coordinate[0], coordinate[1], tmp);
-						memset(pkmn, 0, ofs.pkxLength);
+						memset(pkmn, 0, perGameOffsets.pkxLength);
 						isBufferized = false;
 					}
 				}
 			}
 			else {
 				if (isWirelessBuffer || (!(isBattleBoxed(mainbuf, saveBox, currentEntry - 30) && (currentEntry > 29)))) {
-					u8 tmp[ofs.pkxLength];
-					memset(tmp, 0, ofs.pkxLength);
+					u8 tmp[perGameOffsets.pkxLength];
+					memset(tmp, 0, perGameOffsets.pkxLength);
 				
 					coordinate[0] = (currentEntry < 30) ? bankBox : saveBox;
 					coordinate[1] = (currentEntry > 29) ? (currentEntry - 30) : currentEntry;
 					
 					if (currentEntry < 30) {
-						memcpy(pkmn, &bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], ofs.pkxLength);
+						memcpy(pkmn, &bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], perGameOffsets.pkxLength);
 						clearMarkings(pkmn);
-						if (pkx_get_species(pkmn) == 0 || pkx_get_species(pkmn) > ofs.maxSpecies) {
-							memset(pkmn, 0, ofs.pkxLength);
+						if (pkx_get_species(pkmn) == 0 || pkx_get_species(pkmn) > perGameOffsets.maxSpecies) {
+							memset(pkmn, 0, perGameOffsets.pkxLength);
 							isBufferized = false;
 						} else {
-							memcpy(&bankbuf[bankBox * 30 * ofs.pkxLength + currentEntry * ofs.pkxLength], tmp, ofs.pkxLength);
+							memcpy(&bankbuf[bankBox * 30 * perGameOffsets.pkxLength + currentEntry * perGameOffsets.pkxLength], tmp, perGameOffsets.pkxLength);
 							isBufferized = true;
 						}
 					} else {
@@ -563,8 +563,8 @@ void bank(u8* mainbuf) {
 							getFromWirelessBuf(wirelessbuf, saveBox, currentEntry - 30, pkmn);
 						}
 						
-						if (pkx_get_species(pkmn) == 0 || pkx_get_species(pkmn) > ofs.maxSpecies) {
-							memset(pkmn, 0, ofs.pkxLength);
+						if (pkx_get_species(pkmn) == 0 || pkx_get_species(pkmn) > perGameOffsets.maxSpecies) {
+							memset(pkmn, 0, perGameOffsets.pkxLength);
 							isBufferized = false;
 						} else {
 							if (!isWirelessBuffer)

@@ -549,13 +549,13 @@ u32 pkx_get_save_address(const int boxnumber, const int indexnumber) {
 
 	if (game_getisORAS() || game_getisSUMO() || game_getisUSUM()) {
 		if (boxnumber < 33)
-			return boxpos + (ofs.pkmnLength * 30 * boxnumber) + (indexnumber * ofs.pkmnLength);
+			return boxpos + (perGameOffsets.pkmnLength * 30 * boxnumber) + (indexnumber * perGameOffsets.pkmnLength);
 		return boxpos + indexnumber * 260;
 	}
 	
 	else if (game_isgen5()) {
 		if (boxnumber < 25)
-			return boxpos + (ofs.pkmnLength * 30 * boxnumber) + (indexnumber * ofs.pkmnLength);
+			return boxpos + (perGameOffsets.pkmnLength * 30 * boxnumber) + (indexnumber * perGameOffsets.pkmnLength);
 		return boxpos + indexnumber * 220;
 	}
 }
@@ -567,7 +567,7 @@ void pkx_calculate_checksum(u8* data) {
 
 u16 pkx_return_checksum(u8* data) {
 	u16 chk = 0;
-	for (int i = 8; i < ofs.pkmnLength; i += 2)
+	for (int i = 8; i < perGameOffsets.pkmnLength; i += 2)
 	{
 		chk += *(u16*)(data + i);
 	}
@@ -583,10 +583,10 @@ void pkx_shuffle_array(u8* pkmn, const u32 encryptionkey, const BLOCKLENGHT) {
     int dloc[24] = { 3, 2, 3, 2, 1, 1, 3, 2, 3, 2, 1, 1, 3, 2, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0 };
     int ord[4] = {aloc[seed], bloc[seed], cloc[seed], dloc[seed]};
 
-    char pkmncpy[ofs.pkmnLength];
+    char pkmncpy[perGameOffsets.pkmnLength];
     char tmp[BLOCKLENGHT];
 
-    memcpy(&pkmncpy, pkmn, ofs.pkmnLength);
+    memcpy(&pkmncpy, pkmn, perGameOffsets.pkmnLength);
 
     for (int i = 0; i < 4; i++) {
         memcpy(tmp, pkmncpy + 8 + BLOCKLENGHT * ord[i], BLOCKLENGHT);
@@ -600,7 +600,7 @@ void pk67_decrypt(u8* pkmn) {
     u32 seed = encryptionkey;
 
     u16 temp;
-    for (int i = 0x08; i < ofs.pkmnLength; i += 2) {
+    for (int i = 0x08; i < perGameOffsets.pkmnLength; i += 2) {
         memcpy(&temp, &pkmn[i], 2);
         temp ^= (pkx_seedstep(seed) >> 16);
         seed = pkx_seedstep(seed);
@@ -624,7 +624,7 @@ void pk45_decrypt(u8* pkmn) {
         memcpy(&pkmn[i], &temp, 2);
     }
 
-    for (int i = 4 * BLOCKLENGTH + 8; i < ofs.pkmnLength; i += 2) {
+    for (int i = 4 * BLOCKLENGTH + 8; i < perGameOffsets.pkmnLength; i += 2) {
         memcpy(&temp, &pkmn[i], 2);
         temp ^= (pkx_seedstep(seed) >> 16);
         seed = pkx_seedstep(seed);
@@ -643,7 +643,7 @@ void pk67_encrypt(u8* pkmn) {
         pkx_shuffle_array(pkmn, encryptionkey, BLOCKLENGTH);
 
     u16 temp;
-    for(int i = 0x08; i < ofs.pkmnLength; i += 2) {
+    for(int i = 0x08; i < perGameOffsets.pkmnLength; i += 2) {
         memcpy(&temp, &pkmn[i], 2);
         temp ^= (pkx_seedstep(seed) >> 16);
         seed = pkx_seedstep(seed);
@@ -670,7 +670,7 @@ void pk45_encrypt(u8* pkmn) {
         memcpy(&pkmn[i], &temp, 2);
     }
 
-    for (int i = 4 * BLOCKLENGTH + 8; i < ofs.pkmnLength; i += 2) {
+    for (int i = 4 * BLOCKLENGTH + 8; i < perGameOffsets.pkmnLength; i += 2) {
         memcpy(&temp, &pkmn[i], 2);
         temp ^= (pkx_seedstep(seed) >> 16);
         seed = pkx_seedstep(seed);
@@ -679,7 +679,7 @@ void pk45_encrypt(u8* pkmn) {
 }
 
 void pkx_get(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
-    memcpy(pkmn, &mainbuf[pkx_get_save_address(boxnumber, indexnumber)], ofs.pkmnLength);
+    memcpy(pkmn, &mainbuf[pkx_get_save_address(boxnumber, indexnumber)], perGameOffsets.pkmnLength);
     if (game_isgen7() || game_isgen6())
         pk67_decrypt(pkmn);
     if (game_isgen5() || game_isgen4())
@@ -689,17 +689,17 @@ void pkx_get(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) 
 void pkx_set(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
 	if (PKSM_Configuration.editInTransfers != 0) {
 		u8 latestHandlers[10];
-		char ot_name[ofs.nicknameLength];
-		char save_name[ofs.nicknameLength];
-		char ht_name[ofs.nicknameLength];
-		memset(ht_name, 0, ofs.nicknameLength);
+		char ot_name[perGameOffsets.nicknameLength];
+		char save_name[perGameOffsets.nicknameLength];
+		char ht_name[perGameOffsets.nicknameLength];
+		memset(ht_name, 0, perGameOffsets.nicknameLength);
 
 		memcpy(latestHandlers, &pkmn[0x94], 10);
-		memcpy(ot_name, &pkmn[0xB0], ofs.nicknameLength);
-		memcpy(save_name, &mainbuf[ofs.saveOT], ofs.nicknameLength);
+		memcpy(ot_name, &pkmn[0xB0], perGameOffsets.nicknameLength);
+		memcpy(save_name, &mainbuf[perGameOffsets.saveOT], perGameOffsets.nicknameLength);
 		
 		if (!((getSaveTID(mainbuf) == pkx_get_tid(pkmn)) && (getSaveSID(mainbuf) == pkx_get_sid(pkmn)) &&
-			 (getSaveGender(mainbuf) == pkx_get_ot_gender(pkmn)) && !memcmp(ot_name, save_name, ofs.nicknameLength)) &&
+			 (getSaveGender(mainbuf) == pkx_get_ot_gender(pkmn)) && !memcmp(ot_name, save_name, perGameOffsets.nicknameLength)) &&
 			 !(pkx_is_egg(pkmn))) { //you're the first owner
 			pkx_set_ht(pkmn, save_name);
 			pkx_set_ht_gender(pkmn, getSaveGender(mainbuf));
@@ -716,14 +716,14 @@ void pkx_set(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) 
 	if (game_isgen5() || game_isgen4())
 		pk45_encrypt(pkmn);
 
-    memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, ofs.pkmnLength);
+    memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, perGameOffsets.pkmnLength);
 }
 
 void pkx_set_as_it_is(u8* mainbuf, const int boxnumber, const int indexnumber, u8* pkmn) {
     pkx_calculate_checksum(pkmn);
     pk67_encrypt(pkmn);
 	
-    memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, ofs.pkmnLength);
+    memcpy(&mainbuf[pkx_get_save_address(boxnumber, indexnumber)], pkmn, perGameOffsets.pkmnLength);
 }
 
 // Only useful for gen >6
@@ -875,39 +875,39 @@ u16 pkx_get_move(u8* pkmn, const int nmove) {
 }
 
 u32 *pkx_get_ot(u8* pkmn, u32* dst) {
-	u16 src[ofs.nicknameLength];
+	u16 src[perGameOffsets.nicknameLength];
 	if (game_is3DS())
-		memcpy(src, &pkmn[0xB0], ofs.nicknameLength);
+		memcpy(src, &pkmn[0xB0], perGameOffsets.nicknameLength);
 	else if (game_isDS())
-		memcpy(src, &pkmn[0x68], ofs.nicknameLength);
-	utf16_to_utf32(dst, src, ofs.nicknameLength);
+		memcpy(src, &pkmn[0x68], perGameOffsets.nicknameLength);
+	utf16_to_utf32(dst, src, perGameOffsets.nicknameLength);
 	return dst;
 }
 
 u32 *pkx_get_nickname(u8* pkmn, u32* dst) {
-	u16 src[ofs.nicknameLength];
+	u16 src[perGameOffsets.nicknameLength];
 	if (game_is3DS())
-		memcpy(src, &pkmn[0x40], ofs.nicknameLength);
+		memcpy(src, &pkmn[0x40], perGameOffsets.nicknameLength);
 	else if (game_isDS())
-		memcpy(src, &pkmn[0x48], ofs.nicknameLength);
-	utf16_to_utf32(dst, src, ofs.nicknameLength);
+		memcpy(src, &pkmn[0x48], perGameOffsets.nicknameLength);
+	utf16_to_utf32(dst, src, perGameOffsets.nicknameLength);
 	return dst;
 }
 
 u8 *pkx_get_nickname_u8(u8* pkmn, u8* dst) {
 	u8 offset = game_is3DS() ? 0x40 : 0x48;
-	u16 src[ofs.nicknameLength];
-	for (int i = 0; i < ofs.nicknameLength; i++)
+	u16 src[perGameOffsets.nicknameLength];
+	for (int i = 0; i < perGameOffsets.nicknameLength; i++)
 		src[i] = *(u16*)(pkmn + offset + i*2);
-	utf16_to_utf8(dst, src, ofs.nicknameLength*2);
+	utf16_to_utf8(dst, src, perGameOffsets.nicknameLength*2);
 	return dst;
 }
 
 u32 *pkx_get_ht(u8* pkmn, u32* dst) {
 	if (game_is3DS()) {
-		u16 src[ofs.nicknameLength];
-		memcpy(src, &pkmn[0x78], ofs.nicknameLength);
-		utf16_to_utf32(dst, src, ofs.nicknameLength);
+		u16 src[perGameOffsets.nicknameLength];
+		memcpy(src, &pkmn[0x78], perGameOffsets.nicknameLength);
+		utf16_to_utf32(dst, src, perGameOffsets.nicknameLength);
 		return dst;
 	}
 	else
@@ -1143,7 +1143,7 @@ void pkx_set_egg_move(u8* pkmn, const u16 move, const int nmove) {
 
 void pkx_set_ht(u8* pkmn, char* nick) {
 	if (game_is3DS())
-		memcpy(&pkmn[0x78], nick, NICKNAMELENGTH);
+		memcpy(&pkmn[0x78], nick, perGameOffsets.nicknameLength);
 }
 
 void pkx_set_ht_gender(u8* pkmn, const u8 gender) {
@@ -1264,10 +1264,10 @@ void pkx_set_nickname_flag(u8* pkmn) {
 
 void pkx_set_nickname(u8* pkmn, char* nick, const int dst) {
 	// dst 0x40(Nickname) 0xB0(OT) 0x78(HT)
-	u8 toinsert[ofs.nicknameLength];
-	memset(toinsert, 0, ofs.nicknameLength);
+	u8 toinsert[perGameOffsets.nicknameLength];
+	memset(toinsert, 0, perGameOffsets.nicknameLength);
 
-	if (!memcmp(nick, toinsert, ofs.nicknameLength))
+	if (!memcmp(nick, toinsert, perGameOffsets.nicknameLength))
 		return;
 
 	char buf;
@@ -1300,7 +1300,7 @@ void pkx_set_nickname(u8* pkmn, char* nick, const int dst) {
 		}
 		
 		w += 2;
-		if (w > ofs.nicknameLength)
+		if (w > perGameOffsets.nicknameLength)
 			break;
 	}
 
@@ -1308,7 +1308,7 @@ void pkx_set_nickname(u8* pkmn, char* nick, const int dst) {
 		pkx_set_nickname_flag(pkmn);
 	}
 
-	memcpy(&pkmn[dst], toinsert, ofs.nicknameLength);
+	memcpy(&pkmn[dst], toinsert, perGameOffsets.nicknameLength);
 }
 
 void pkx_set_ribbons(u8* pkmn, const int ribcat, const int ribnumber, const bool value) {
@@ -1376,5 +1376,5 @@ bool pkx_is_valid(u8* pkmn)
 	return sanity == 0 
 		   && checksum == *(u16*)(pkmn + 6)
 		   && species > 0
-		   && species <= ofs.totalSpecies; 
+		   && species <= perGameOffsets.totalSpecies; 
 }

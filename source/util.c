@@ -149,7 +149,7 @@ void fixBadSectors(void)
 	FILE *fptr = fopen("sdmc:/3ds/PKSM/bank/bank.bin", "rt");
 	fseek(fptr, 0, SEEK_END);
 	u32 size = ftell(fptr);
-	if (size != 0 && size % (30*ofs.pkxLength))
+	if (size != 0 && size % (30*perGameOffsets.pkxLength))
 	{
 		fclose(fptr);
 		infoDisp(i18n(S_BADSECTORS_BAD_SIZE));
@@ -169,15 +169,15 @@ void fixBadSectors(void)
 	fclose(fptr);
 	
 	freezeMsg(i18n(S_BADSECTORS_CHECKING));
-	u32 boxes = size/(30*ofs.pkxLength) - 1;
+	u32 boxes = size/(30*perGameOffsets.pkxLength) - 1;
 	for (u32 i = 0, n = 30*boxes; i < n; i++)
 	{
-		u16 tempSpecies = *(u16*)(buffer + i*ofs.pkxLength + 0x8);
-		if (tempSpecies == 0 || tempSpecies > ofs.totalSpecies)
+		u16 tempSpecies = *(u16*)(buffer + i*perGameOffsets.pkxLength + 0x8);
+		if (tempSpecies == 0 || tempSpecies > perGameOffsets.totalSpecies)
 		{
-			for (u32 j = 0; j < ofs.pkxLength; j++)
+			for (u32 j = 0; j < perGameOffsets.pkxLength; j++)
 			{
-				buffer[i*ofs.pkxLength + j] = 0;
+				buffer[i*perGameOffsets.pkxLength + j] = 0;
 			}
 		}
 	}
@@ -210,7 +210,7 @@ void resizeStorage(void)
 		u32 size = ftell(bank);
 		
 		// add boxes to storage file
-		if (size < PKSM_Configuration.storageSize * 30 * ofs.pkxLength)
+		if (size < PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength)
 		{
 			freezeMsg(i18n(S_BANK_RESIZING));
 			u8 *bankbuf = (u8*)malloc(size);
@@ -222,19 +222,19 @@ void resizeStorage(void)
 			fwrite(bankbuf, 1, size, bak);
 			fclose(bak);
 			
-			u8* newbank = (u8*)malloc(PKSM_Configuration.storageSize * 30 * ofs.pkxLength);
-			memset(newbank, 0, PKSM_Configuration.storageSize * 30 * ofs.pkxLength);
+			u8* newbank = (u8*)malloc(PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength);
+			memset(newbank, 0, PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength);
 			memcpy(newbank, bankbuf, size);
 			
 			FILE *newbankfile = fopen(storagePath, "wb");
-			fwrite(newbank, 1, PKSM_Configuration.storageSize * 30 * ofs.pkxLength, newbankfile);
+			fwrite(newbank, 1, PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength, newbankfile);
 			fclose(newbankfile);
 			
 			free(bankbuf);
 			free(newbank);					
 		}
 		// trim boxes from storage file
-		else if (size > PKSM_Configuration.storageSize * 30 * ofs.pkxLength)
+		else if (size > PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength)
 		{
 			freezeMsg(i18n(S_BANK_RESIZING));
 			u8 *bankbuf = (u8*)malloc(size);
@@ -246,12 +246,12 @@ void resizeStorage(void)
 			fwrite(bankbuf, 1, size, bak);
 			fclose(bak);
 			
-			u8* newbank = (u8*)malloc(PKSM_Configuration.storageSize * 30 * ofs.pkxLength);
-			memset(newbank, 0, PKSM_Configuration.storageSize * 30 * ofs.pkxLength);
-			memcpy(newbank, bankbuf, PKSM_Configuration.storageSize * 30 * ofs.pkxLength);
+			u8* newbank = (u8*)malloc(PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength);
+			memset(newbank, 0, PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength);
+			memcpy(newbank, bankbuf, PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength);
 			
 			FILE *newbankfile = fopen(storagePath, "wb");
-			fwrite(newbank, 1, PKSM_Configuration.storageSize * 30 * ofs.pkxLength, newbankfile);
+			fwrite(newbank, 1, PKSM_Configuration.storageSize * 30 * perGameOffsets.pkxLength, newbankfile);
 			fclose(newbankfile);
 			
 			free(bankbuf);

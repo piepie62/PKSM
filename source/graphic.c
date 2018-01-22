@@ -457,7 +457,7 @@ void printEventList(char *database[], int currentEntry, int page, int spriteArra
 void printEventInjector(u8* previewbuf, int sprite, int i, bool langVett[], bool adapt, bool overwrite, int langSelected, int nInjected, int mode) {
 	static const char *languages[] = {"JPN", "ENG", "FRE", "ITA", "GER", "SPA", "KOR", "CHS", "CHT"};
 	char cont[3];
-	snprintf(cont, 3, "%d", nInjected == ofs.maxWondercards ? 1 : nInjected + 1);
+	snprintf(cont, 3, "%d", nInjected == perGameOffsets.maxWondercards ? 1 : nInjected + 1);
 	
 	const int total = game_isgen7() ? 9 : 7;
 	
@@ -498,12 +498,12 @@ void printEventInjector(u8* previewbuf, int sprite, int i, bool langVett[], bool
 			char temp[4];
 			
 			// load sprites for existing wondercards
-			int sprites[ofs.maxWondercards];
-			memset(sprites, -1, ofs.maxWondercards*sizeof(int));
-			for (u8 i = 0; i < ofs.maxWondercards; i++)
+			int sprites[perGameOffsets.maxWondercards];
+			memset(sprites, -1, perGameOffsets.maxWondercards*sizeof(int));
+			for (u8 i = 0; i < perGameOffsets.maxWondercards; i++)
 			{
-				u8 wcbuf[ofs.wondercardSize];
-				memcpy(wcbuf, previewbuf + ofs.wondercardLocation + i*ofs.wondercardSize, ofs.wondercardSize);
+				u8 wcbuf[perGameOffsets.wondercardSize];
+				memcpy(wcbuf, previewbuf + perGameOffsets.wondercardLocation + i*perGameOffsets.wondercardSize, perGameOffsets.wondercardSize);
 				if (wcx_is_pokemon(wcbuf) && wcx_get_species(wcbuf) > 0)
 				{
 					sprites[i] = wcx_get_species(wcbuf);
@@ -524,7 +524,7 @@ void printEventInjector(u8* previewbuf, int sprite, int i, bool langVett[], bool
 						printSelector(j*49 + j, i*47 + i, 49, 47);
 					}
 					
-					if (index < ofs.maxWondercards)
+					if (index < perGameOffsets.maxWondercards)
 					{
 						if (index < max && sprites[index] != -1)
 						{
@@ -635,7 +635,7 @@ void printElement(u8* pkmn, int game, u16 n, int x, int y) {
 		t -= 1;
 		pp2d_draw_texture_part(TEXTURE_ALTERNATIVE_SPRITESHEET, x, y, 34 * (t % 6), 30 * (t / 6), 34, 30);  
 	} else {
-		if (pkx_get_species(pkmn) > ofs.totalSpecies)
+		if (pkx_get_species(pkmn) > perGameOffsets.totalSpecies)
 			pp2d_draw_texture_part(TEXTURE_NORMAL_SPRITESHEET, x, y, 0, 0, 34, 30);
 		else
 			pp2d_draw_texture_part(TEXTURE_NORMAL_SPRITESHEET, x, y, 34 * (n % 30), 30 * (n / 30), 34, 30);
@@ -652,7 +652,7 @@ void printElementBlend(u8* pkmn, int game, u16 n, int x, int y, u32 color) {
 		t -= 1;
 		pp2d_draw_texture_part_blend(TEXTURE_ALTERNATIVE_SPRITESHEET, x, y, 34 * (t % 6), 30 * (t / 6), 34, 30, color); 
 	} else {
-		if (pkx_get_species(pkmn) > ofs.totalSpecies)
+		if (pkx_get_species(pkmn) > perGameOffsets.totalSpecies)
 			pp2d_draw_texture_part_blend(TEXTURE_NORMAL_SPRITESHEET, x, y, 0, 0, 34, 30, color);
 		else
 			pp2d_draw_texture_part_blend(TEXTURE_NORMAL_SPRITESHEET, x, y, 34 * (n % 30), 30 * (n / 30), 34, 30, color);
@@ -693,7 +693,7 @@ void infoViewer(u8* pkmn) {
 		y_desc += 20;
 	}
 	
-	if (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= ofs.totalSpecies) {
+	if (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= perGameOffsets.totalSpecies) {
 		pp2d_draw_texture_part(TEXTURE_BALLS_SPRITESHEET, -2, -5, 32 * (pkx_get_ball(pkmn) % 8), 32 * (pkx_get_ball(pkmn) / 8), 32, 32);
 		pp2d_draw_wtext(30, 6, FONT_SIZE_12, FONT_SIZE_12, WHITE, listSpecies.items[pkx_get_species(pkmn)]);
 		
@@ -708,11 +708,13 @@ void infoViewer(u8* pkmn) {
 		swprintf(level, 8, i18n(S_GRAPHIC_INFOVIEWER_LV), pkx_get_level(pkmn));
 		pp2d_draw_wtext(160, 6, FONT_SIZE_12, FONT_SIZE_12, WHITE, level);
 		
-		u32 nick[NICKNAMELENGTH*2] = {0};
+		u32 nick[perGameOffsets.nicknameLength*2];
+		memset(nick, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 		pkx_get_nickname(pkmn, nick);
 		pp2d_draw_wtext(215 - pp2d_get_wtext_width((wchar_t*)nick, FONT_SIZE_12, FONT_SIZE_12), 29, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)nick);
 		
-		u32 ot_name[NICKNAMELENGTH*2] = {0};
+		u32 ot_name[perGameOffsets.nicknameLength*2];
+		memset(ot_name, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 		pkx_get_ot(pkmn, ot_name);
 		pp2d_draw_wtext(215 - pp2d_get_wtext_width((wchar_t*)ot_name, FONT_SIZE_12, FONT_SIZE_12), 49, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)ot_name);
 		
@@ -859,7 +861,7 @@ void printPKViewer(u8* mainbuf, u8* tmp, bool isTeam, int currentEntry, int menu
 					if (additional1 == i * 8 + j)
 						printSelector(j*49 + j, i*47 + i, 49, 47);
 					
-					if ((i*8+j + 40*additional2) < ofs.totalSpecies) {
+					if ((i*8+j + 40*additional2) < perGameOffsets.totalSpecies) {
 						pp2d_draw_texture_part(TEXTURE_NORMAL_SPRITESHEET, 7 + 49 * j + j, 2 + 47 * i + i, 34 * ((40 * additional2 + i * 8 + j + 1) % 30), 30 * ((40 * additional2 + i * 8 + j + 1) / 30), 34, 30);
 						snprintf(temp, 4, "%d", 40 * additional2 + i * 8 + j + 1);
 						pp2d_draw_text(49 * j + (49 - pp2d_get_text_width(temp, FONT_SIZE_9, FONT_SIZE_9)) / 2 + j, 34 + i * 47 + i, FONT_SIZE_9, FONT_SIZE_9, WHITE, temp);
@@ -896,7 +898,7 @@ void printPKViewer(u8* mainbuf, u8* tmp, bool isTeam, int currentEntry, int menu
 			for (int j = 0; j < 6; j++) {
 				pkx_get(mainbuf, box, i * 6 + j, pkmn);
 				u16 n = pkx_get_species(pkmn);
-				if (n > 0 && n <= ofs.totalSpecies)
+				if (n > 0 && n <= perGameOffsets.totalSpecies)
 					printElement(pkmn, game, n, x, y);
 
 				if ((currentEntry == (i * 6 + j)) && !isTeam) {
@@ -999,11 +1001,11 @@ void printPKEditor(u8* pkmn, int additional1, int additional2, int additional3, 
 					printSelector(2, y, 198, 11);
 				else if (i + 20 == additional1) 
 					printSelector(200, y, 198, 11);
-				if (entry <= ofs.totalItems)
+				if (entry <= perGameOffsets.totalItems)
 				{
 					pp2d_draw_wtextf(2, y, FONT_SIZE_9, FONT_SIZE_9, WHITE, L"%d - %ls", entry, itemsSorted[entry]);
 				}
-				if (entry + 20 <= ofs.totalItems)
+				if (entry + 20 <= perGameOffsets.totalItems)
 				{				
 					pp2d_draw_wtextf(200, y, FONT_SIZE_9, FONT_SIZE_9, WHITE, L"%d - %ls", entry + 20, itemsSorted[entry + 20]);
 				}
@@ -1019,11 +1021,11 @@ void printPKEditor(u8* pkmn, int additional1, int additional2, int additional3, 
 					printSelector(2, y, 198, 11);
 				else if (i + 20 == additional1) 
 					printSelector(200, y, 198, 11);
-				if (entry <= ofs.totalMoves)
+				if (entry <= perGameOffsets.totalMoves)
 				{
 					pp2d_draw_wtextf(2, y, FONT_SIZE_9, FONT_SIZE_9, WHITE, L"%d - %ls", entry, movesSorted[entry]);
 				}
-				if (entry + 20 <= ofs.totalMoves)
+				if (entry + 20 <= perGameOffsets.totalMoves)
 				{
 					pp2d_draw_wtextf(200, y, FONT_SIZE_9, FONT_SIZE_9, WHITE, L"%d - %ls", entry + 20, movesSorted[entry + 20]);
 				}
@@ -1111,7 +1113,7 @@ void printPKEditor(u8* pkmn, int additional1, int additional2, int additional3, 
 						printSelector(columns*25, rows*15, 24, 14);
 					pp2d_draw_textf(4 + 25*columns, 15*rows, FONT_SIZE_11, FONT_SIZE_11, (sector[byte][0]) ? WHITE : DS, "%02hhX", pkmn[byte]);
 					
-					if (byte == ofs.pkmnLength - 1) break;
+					if (byte == perGameOffsets.pkmnLength - 1) break;
 				}
 			}
 			pp2d_draw_wtextf(4, 225, FONT_SIZE_11, FONT_SIZE_11, LIGHTBLUE, L"%ls", descriptions[additional1]);
@@ -1180,11 +1182,14 @@ void printPKEditor(u8* pkmn, int additional1, int additional2, int additional3, 
 				snprintf(friendship, 4, "%u", pkx_get_friendship(pkmn));
 			pp2d_draw_text(180 - max - 3 + (max - pp2d_get_text_width(friendship, FONT_SIZE_12, FONT_SIZE_12)) / 2, 189, FONT_SIZE_12, FONT_SIZE_12, WHITE, friendship);
 			
-			u32 nick[NICKNAMELENGTH*2] = {0};
+			u32 nick[perGameOffsets.nicknameLength*2];
+			memset(nick, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 			pkx_get_nickname(pkmn, nick);
 			pp2d_draw_wtext(178 - pp2d_get_wtext_width((wchar_t*)nick, FONT_SIZE_12, FONT_SIZE_12), 169, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)nick);
+			free(nick);
 
-			u32 ot_name[NICKNAMELENGTH*2] = {0};
+			u32 ot_name[perGameOffsets.nicknameLength*2];
+			memset(ot_name, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 			pkx_get_ot(pkmn, ot_name);
 			pp2d_draw_wtext(178 - pp2d_get_wtext_width((wchar_t*)ot_name, FONT_SIZE_12, FONT_SIZE_12), 149, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)ot_name);
 		}
@@ -1309,7 +1314,7 @@ void printPKBank(u8* bankbuf, u8* mainbuf, u8* wirelessBuffer, u8* pkmnbuf, int 
 			swprintf(page, MAX_LENGTH_BOX_NAME+1, i18n(S_GRAPHIC_PKBANK_BANK_TITLE), bankBox + 1);
 			pp2d_draw_wtext(55 + (178 - pp2d_get_wtext_width(page, FONT_SIZE_12, FONT_SIZE_12)) / 2, 9, FONT_SIZE_12, FONT_SIZE_12, WHITE, page);
 
-			if (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= ofs.totalSpecies) {
+			if (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= perGameOffsets.totalSpecies) {
 				u16 tempspecies = pkx_get_form_species_number(pkmn);
 				u8 type1 = 0, type2 = 0;
 
@@ -1327,7 +1332,8 @@ void printPKBank(u8* bankbuf, u8* mainbuf, u8* wirelessBuffer, u8* pkmnbuf, int 
 				if (type1 != type2)
 					pp2d_draw_texture_part(TEXTURE_TYPES_SPRITESHEET, 325, 103, 50 * type2, 0, 50, 18); 
 				
-				u32 nick[NICKNAMELENGTH*2] = {0};
+				u32 nick[perGameOffsets.nicknameLength*2];
+				memset(nick, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 				pkx_get_nickname(pkmn, nick);
 				pp2d_draw_wtext(273, 50, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)nick);
 				
@@ -1347,7 +1353,8 @@ void printPKBank(u8* bankbuf, u8* mainbuf, u8* wirelessBuffer, u8* pkmnbuf, int 
 				if (pkx_is_shiny(pkmn))
 					pksm_draw_texture(TEXTURE_SHINY, 360 - width - 14, 69);
 				
-				u32 ot_name[NICKNAMELENGTH*2] = {0};
+				u32 ot_name[perGameOffsets.nicknameLength*2];
+				memset(ot_name, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 				pkx_get_ot(pkmn, ot_name);
 				pp2d_draw_wtext(273, 126, FONT_SIZE_12, FONT_SIZE_12, WHITE, (wchar_t*)ot_name);
 
@@ -1517,8 +1524,8 @@ void printfConfigEditorInfo(int currentEntry)
 
 void printfHexEditorInfo(u8* pkmn, int byte) {
 	int y = 70, x = 8, xribbon = 90;
-	u32 string[NICKNAMELENGTH*2];
-	memset(string, 0, NICKNAMELENGTH*2*sizeof(u32));
+	u32 string[perGameOffsets.nicknameLength*2];
+	memset(string, 0, perGameOffsets.nicknameLength*2*sizeof(u32));
 	
 	switch (byte) {
 		case 0x08 :

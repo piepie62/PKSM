@@ -25,7 +25,7 @@ bool isBattleBoxed(u8* mainbuf, int box, int slot)
 	if (game_isgen7())
 	{
 		u8 team_lookup[72];
-		memcpy(&team_lookup[0], &mainbuf[ofs.battleBoxes], 72);
+		memcpy(&team_lookup[0], &mainbuf[perGameOffsets.battleBoxes], 72);
 		for (int i = 0; i < 72; i += 2)
 		{
 			if ((team_lookup[i] == (u8)slot) && (team_lookup[i + 1] == (u8)box))
@@ -39,22 +39,22 @@ bool isBattleBoxed(u8* mainbuf, int box, int slot)
 }
 
 u32 *getSaveOT(u8* mainbuf, u32* dst) {
-	u16 src[ofs.nicknameLength];
-	memcpy(src, &mainbuf[ofs.saveOT], ofs.nicknameLength);
-	utf16_to_utf32(dst, src, ofs.nicknameLength);
+	u16 src[perGameOffsets.nicknameLength];
+	memcpy(src, &mainbuf[perGameOffsets.saveOT], perGameOffsets.nicknameLength);
+	utf16_to_utf32(dst, src, perGameOffsets.nicknameLength);
 	return dst;
 }
 
 u8 getSaveGender(u8* mainbuf) {
-    return *(u8*)(mainbuf + ofs.saveGender);
+    return *(u8*)(mainbuf + perGameOffsets.saveGender);
 }
 
 u16 getSaveTID(u8* mainbuf) {
-    return *(u16*)(mainbuf + ofs.saveTID);
+    return *(u16*)(mainbuf + perGameOffsets.saveTID);
 }
 
 u16 getSaveSID(u8* mainbuf) {
-    return *(u16*)(mainbuf + ofs.saveSID);
+    return *(u16*)(mainbuf + perGameOffsets.saveSID);
 }
 
 u16 getSaveTSV(u8* mainbuf) {
@@ -64,14 +64,14 @@ u16 getSaveTSV(u8* mainbuf) {
 }
 
 u32 getSaveSeed(u8* mainbuf, int index) {
-    return *(u32*)(mainbuf + ofs.saveSeed + index*0x4);
+    return *(u32*)(mainbuf + perGameOffsets.saveSeed + index*0x4);
 }
 
 void setWC(u8* mainbuf, u8* wcbuf, int i, int nInjected[]) {
 	if (game_is3DS())
 	{
-		*(mainbuf + ofs.wondercardLocation - 0x100 + i / 8) |= 0x1 << (i % 8);
-		memcpy((void*)(mainbuf + ofs.wondercardLocation + nInjected[0] * ofs.wondercardSize), (const void*)wcbuf, ofs.wondercardSize);
+		*(mainbuf + perGameOffsets.wondercardLocation - 0x100 + i / 8) |= 0x1 << (i % 8);
+		memcpy((void*)(mainbuf + perGameOffsets.wondercardLocation + nInjected[0] * perGameOffsets.wondercardSize), (const void*)wcbuf, perGameOffsets.wondercardSize);
 
 		if (game_getisORAS() && i == 2048)
 		{
@@ -95,8 +95,8 @@ void setWC(u8* mainbuf, u8* wcbuf, int i, int nInjected[]) {
 			memcpy(&mainbuf[0x1C800 + i], &temp, 2);
 		}
 
-		*(mainbuf + ofs.wondercardLocation - 0x100 + i / 8) |= 0x1 << (i & 7);
-		memcpy((void*)(mainbuf + ofs.wondercardLocation + nInjected[0] * ofs.wondercardSize), (const void*)wcbuf, ofs.wondercardSize);
+		*(mainbuf + perGameOffsets.wondercardLocation - 0x100 + i / 8) |= 0x1 << (i & 7);
+		memcpy((void*)(mainbuf + perGameOffsets.wondercardLocation + nInjected[0] * perGameOffsets.wondercardSize), (const void*)wcbuf, perGameOffsets.wondercardSize);
 
 		//encrypt
 		memcpy(&seed, &mainbuf[0x1D290], sizeof(u32));
@@ -115,38 +115,38 @@ void setWC(u8* mainbuf, u8* wcbuf, int i, int nInjected[]) {
 		mainbuf[GBO + 72] = (u8)((mainbuf[GBO + 72] & 0xFE) | 1);
 		if (game == GAME_HG || game == GAME_SS) {
 			*(mainbuf + 0x9D3C + GBO + (2047 >> 3)) = 0x80;
-			memcpy(&mainbuf[0x9E3C + GBO + nInjected[0] * ofs.wondercardSize], wcbuf, ofs.wondercardSize);
+			memcpy(&mainbuf[0x9E3C + GBO + nInjected[0] * perGameOffsets.wondercardSize], wcbuf, perGameOffsets.wondercardSize);
 		}
 		else if (game == GAME_PLATINUM) {
 			*(mainbuf + 0xB4C0 + GBO + (2047 >> 3)) = 0x80;
-			memcpy(&mainbuf[0xB5C0 + GBO + nInjected[0] * ofs.wondercardSize], wcbuf, ofs.wondercardSize);
+			memcpy(&mainbuf[0xB5C0 + GBO + nInjected[0] * perGameOffsets.wondercardSize], wcbuf, perGameOffsets.wondercardSize);
 		}
 		else if (game == GAME_DIAMOND || game == GAME_PEARL) {
 			memcpy(&mainbuf[0xA7D0 + GBO + nInjected[0] * 4], &DPActiveFlag[0], 4);
-			memcpy(&mainbuf[0xA7FC + GBO + nInjected[0] * ofs.wondercardSize], wcbuf, ofs.wondercardSize);
+			memcpy(&mainbuf[0xA7FC + GBO + nInjected[0] * perGameOffsets.wondercardSize], wcbuf, perGameOffsets.wondercardSize);
 		}
 	}
 
 	nInjected[0] += 1;
-	if (nInjected[0] >= ofs.maxWondercards)
+	if (nInjected[0] >= perGameOffsets.maxWondercards)
 		nInjected[0] = 0;
 }
 
 void setSaveLanguage(u8* mainbuf, int i) {
 	u8 langValues[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x07, 0x08, 0x09, 0x0A};
-	memcpy(&mainbuf[ofs.saveLanguage], &langValues[i], sizeof(u8));
+	memcpy(&mainbuf[perGameOffsets.saveLanguage], &langValues[i], sizeof(u8));
 }
 
 u8 getSaveLanguage(u8* mainbuf) {
-	return mainbuf[ofs.saveLanguage];
+	return mainbuf[perGameOffsets.saveLanguage];
 }
 
 void parseHexEditor(u8* pkmn, int byteEntry) {
 	if (!hax) {
 		if (byteEntry == 0x08 || byteEntry == 0x09)
-			checkMaxValueBetweenBounds(pkmn, byteEntry, 0x08, 2, ofs.maxSpecies);
+			checkMaxValueBetweenBounds(pkmn, byteEntry, 0x08, 2, perGameOffsets.maxSpecies);
 		else if (byteEntry == 0x14)
-			checkMaxValue(pkmn, byteEntry, pkmn[byteEntry], ofs.maxAbilities - 1);
+			checkMaxValue(pkmn, byteEntry, pkmn[byteEntry], perGameOffsets.maxAbilities - 1);
 		else if (byteEntry == 0x15)
 			checkMaxValue(pkmn, byteEntry, pkmn[byteEntry], 1);
 		else if (byteEntry == 0x1D)
@@ -179,7 +179,7 @@ void parseHexEditor(u8* pkmn, int byteEntry) {
 		else
 			pkmn[byteEntry]++;
 	} else if (byteEntry == 0x14) // ability needs a dedicated check for hax mode too
-			checkMaxValue(pkmn, byteEntry, pkmn[byteEntry], ofs.maxAbilities);
+			checkMaxValue(pkmn, byteEntry, pkmn[byteEntry], perGameOffsets.maxAbilities);
 		else 
 			pkmn[byteEntry]++;
 }
@@ -202,21 +202,21 @@ void generate(u8* mainbuf, bool isTeam, int box, int currentEntry, int page, int
 	fread(livingbuf, size, 1, fptr);
 	fclose(fptr);
 
-	memcpy(&mainbuf[pkx_get_save_address((isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry)], &livingbuf[(page * 40 + genEntry) * ofs.pkmnLength], ofs.pkmnLength);
-	u8 tempkmn[ofs.pkmnLength];
+	memcpy(&mainbuf[pkx_get_save_address((isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry)], &livingbuf[(page * 40 + genEntry) * perGameOffsets.pkmnLength], perGameOffsets.pkmnLength);
+	u8 tempkmn[perGameOffsets.pkmnLength];
 	pkx_get(mainbuf, (isTeam) ? (game_isgen4() ? 19 : (game_isgen5() ? 25 : 33)) : box, currentEntry, tempkmn);
-	memcpy(&tempkmn[0xE3], &mainbuf[ofs.saveLanguage], 1); // nats
+	memcpy(&tempkmn[0xE3], &mainbuf[perGameOffsets.saveLanguage], 1); // nats
 
 	// Correct Nickname of current language
-	char nick[ofs.nicknameLength];
-	memset(nick, 0, ofs.nicknameLength);
+	char nick[perGameOffsets.nicknameLength];
+	memset(nick, 0, perGameOffsets.nicknameLength);
 	
 	pkx_set_tid(tempkmn, PKSM_Configuration.defaultTID);
 	pkx_set_sid(tempkmn, PKSM_Configuration.defaultSID);
-	memcpy(tempkmn + 0xB0, PKSM_Configuration.defaultOTName, ofs.nicknameLength);
+	memcpy(tempkmn + 0xB0, PKSM_Configuration.defaultOTName, perGameOffsets.nicknameLength);
 
-	utf32_to_utf8((unsigned char*)nick, (uint32_t*)listSpecies.items[pkx_get_species(tempkmn)], ofs.nicknameLength);
-	nick[ofs.nicknameLength - 1] = '\0';
+	utf32_to_utf8((unsigned char*)nick, (uint32_t*)listSpecies.items[pkx_get_species(tempkmn)], perGameOffsets.nicknameLength);
+	nick[perGameOffsets.nicknameLength - 1] = '\0';
 
 	if (game_is3DS()) pkx_set_nickname(tempkmn, nick, 0x40);
 	else if (game_isDS()) pkx_set_nickname(tempkmn, nick, 0x48);
@@ -248,13 +248,13 @@ void pokemonEditor(u8* mainbuf) {
 	int currentEntry = 0;
 	int menuEntry = 0;
 	int byteEntry = 0;
-	int boxmax = ofs.maxBoxes - 1;
+	int boxmax = perGameOffsets.maxBoxes - 1;
 	int touchExecuting = 0;
 	int oldEntry = 0;
 	
-	wchar_t* descriptions[ofs.pkmnLength];
+	wchar_t* descriptions[perGameOffsets.pkmnLength];
 	
-	u8* pkmn = (u8*)malloc(ofs.pkmnLength * sizeof(u8));
+	u8* pkmn = (u8*)malloc(perGameOffsets.pkmnLength * sizeof(u8));
 	int ability = (int)pkx_get_ability_number(pkmn);
 
 	while (aptMainLoop()) {
@@ -369,7 +369,7 @@ void pokemonEditor(u8* mainbuf) {
 				calcCurrentEntryMorePages(&tempVett[1], &tempVett[0], boxmax + 1, 29, 6);
 
 				if (hidKeysDown() & KEY_X) {
-					u8 toBeChecked[ofs.pkmnLength];
+					u8 toBeChecked[perGameOffsets.pkmnLength];
 					pkx_get(mainbuf, tempVett[0], tempVett[1], toBeChecked);
 					if (pkx_get_species(toBeChecked)) {
 						if (!socket_is_legality_address_set())
@@ -405,7 +405,7 @@ void pokemonEditor(u8* mainbuf) {
 			bool operationDone = false;
 
 			touchExecuting = menuEntry;
-			while (aptMainLoop() && (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= ofs.maxSpecies) && !operationDone && !(hidKeysDown() & KEY_B)) {
+			while (aptMainLoop() && (pkx_get_species(pkmn) > 0 && pkx_get_species(pkmn) <= perGameOffsets.maxSpecies) && !operationDone && !(hidKeysDown() & KEY_B)) {
 				hidScanInput();
 				hidTouchRead(&touch);
 				oldEntry = menuEntry;
@@ -429,12 +429,12 @@ void pokemonEditor(u8* mainbuf) {
 						pkmn[0xE2] = game_get_console_region(mainbuf);
 						pkmn[0xE3] = game_get_language(mainbuf);
 
-						u32 ot32[ofs.nicknameLength];
-						u8 ot[ofs.nicknameLength];
-						memset(ot32, 0, ofs.nicknameLength*sizeof(u32));
-						memset(ot, 0, ofs.nicknameLength);
+						u32 ot32[perGameOffsets.nicknameLength];
+						u8 ot[perGameOffsets.nicknameLength];
+						memset(ot32, 0, perGameOffsets.nicknameLength*sizeof(u32));
+						memset(ot, 0, perGameOffsets.nicknameLength);
 						getSaveOT(mainbuf, ot32);
-						utf32_to_utf8(ot, ot32, ofs.nicknameLength);
+						utf32_to_utf8(ot, ot32, perGameOffsets.nicknameLength);
 
 						if (game_is3DS()) pkx_set_nickname(pkmn, (char*)ot, 0xB0);
 						else if (game_isDS()) pkx_set_nickname(pkmn, (char*)ot, 0x68);
@@ -483,7 +483,7 @@ void pokemonEditor(u8* mainbuf) {
 									while(aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 										hidScanInput();
 										hidTouchRead(&touch);
-										byteEntry = calcCurrentEntryOneScreen(byteEntry, ofs.pkmnLength - 1, 16);
+										byteEntry = calcCurrentEntryOneScreen(byteEntry, perGameOffsets.pkmnLength - 1, 16);
 
 										if (hidKeysDown() & KEY_TOUCH) {
 											if (touch.px > 0 && touch.px < 20 && touch.py > 0 && touch.py < 20) pattern[0] = true;
@@ -684,7 +684,7 @@ void pokemonEditor(u8* mainbuf) {
 										int ballEntry = 0;
 										while(aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 											hidScanInput();
-											ballEntry = calcCurrentEntryOneScreen(ballEntry, ofs.maxBalls - 1, 6);
+											ballEntry = calcCurrentEntryOneScreen(ballEntry, perGameOffsets.maxBalls - 1, 6);
 
 											if (hidKeysDown() & KEY_A) {
 												pkx_set_ball(pkmn, (u8)ballEntry + 1);
@@ -761,8 +761,8 @@ void pokemonEditor(u8* mainbuf) {
 									
 									if (touch.px > 180 && touch.px < 195 && touch.py > 171 && touch.py < 183) {
 										static SwkbdState swkbd;
-										char nick[ofs.nicknameLength];
-										memset(nick, 0, ofs.nicknameLength);
+										char nick[perGameOffsets.nicknameLength];
+										memset(nick, 0, perGameOffsets.nicknameLength);
 
 										SwkbdButton button = SWKBD_BUTTON_NONE;
 										swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, 12);
@@ -772,8 +772,8 @@ void pokemonEditor(u8* mainbuf) {
 										// Fix for swkKeyboard being in UTF8 only (char*)
 										i18n_initTextSwkbd(&swkbd, S_EDITOR_TEXT_CANCEL, S_EDITOR_TEXT_SET, S_EDITOR_TEXT_ENTER_NICKNAME_POKEMON);
 
-										button = swkbdInputText(&swkbd, nick, ofs.nicknameLength);
-										nick[ofs.nicknameLength - 1] = '\0';
+										button = swkbdInputText(&swkbd, nick, perGameOffsets.nicknameLength);
+										nick[perGameOffsets.nicknameLength - 1] = '\0';
 
 										if (button != SWKBD_BUTTON_NONE) {
 											if (game_is3DS()) pkx_set_nickname(pkmn, nick, 0x40);
@@ -783,8 +783,8 @@ void pokemonEditor(u8* mainbuf) {
 									
 									if (touch.px > 180 && touch.px < 195 && touch.py > 151 && touch.py < 163) {
 										static SwkbdState swkbd;
-										char nick[ofs.nicknameLength];
-										memset(nick, 0, ofs.nicknameLength);
+										char nick[perGameOffsets.nicknameLength];
+										memset(nick, 0, perGameOffsets.nicknameLength);
 										
 										SwkbdButton button = SWKBD_BUTTON_NONE;
 										swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, 12);
@@ -794,8 +794,8 @@ void pokemonEditor(u8* mainbuf) {
 										// Fix for swkKeyboard being in UTF8 only (char*)
 										i18n_initTextSwkbd(&swkbd, S_EDITOR_TEXT_CANCEL, S_EDITOR_TEXT_SET, S_EDITOR_TEXT_ENTER_TRAINER_NAME);
 
-										button = swkbdInputText(&swkbd, nick, ofs.nicknameLength);
-										nick[ofs.nicknameLength - 1] = '\0';
+										button = swkbdInputText(&swkbd, nick, perGameOffsets.nicknameLength);
+										nick[perGameOffsets.nicknameLength - 1] = '\0';
 
 										if (button != SWKBD_BUTTON_NONE) {
 											if (game_is3DS()) pkx_set_nickname(pkmn, nick, 0xB0);
@@ -813,7 +813,7 @@ void pokemonEditor(u8* mainbuf) {
 										int *movesSorted = listMoves.sortedItemsID;
 										int moveEntry = 0;
 										int entryBottom = 0;
-										int page = 0, maxpages = ofs.totalMoves/40 + 1;
+										int page = 0, maxpages = perGameOffsets.totalMoves/40 + 1;
 
 										while (aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 											hidScanInput();
@@ -836,7 +836,7 @@ void pokemonEditor(u8* mainbuf) {
 											}
 
 											if (hidKeysDown() & KEY_A) {
-												if (movesSorted[moveEntry + page*40] <= ofs.maxMoveID)
+												if (movesSorted[moveEntry + page*40] <= perGameOffsets.maxMoveID)
 												{
 													if (entryBottom < 4)
 														pkx_set_move(pkmn, movesSorted[moveEntry + page * 40], entryBottom);
@@ -852,13 +852,13 @@ void pokemonEditor(u8* mainbuf) {
 									if (touch.px > 180 && touch.px < 195 && touch.py > 90 && touch.py < 102) {
 										int *itemsSorted = listItems.sortedItemsID;
 										int itemEntry = 0;
-										int page = 0, maxpages = ofs.totalItems/40 + 1;
+										int page = 0, maxpages = perGameOffsets.totalItems/40 + 1;
 										
 										while (aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 											hidScanInput();
 											calcCurrentEntryMorePagesReversed(&itemEntry, &page, maxpages, 39, 20);
 											
-											if (hidKeysDown() & KEY_A && itemsSorted[itemEntry + page * 40] <= ofs.maxItemID) {
+											if (hidKeysDown() & KEY_A && itemsSorted[itemEntry + page * 40] <= perGameOffsets.maxItemID) {
 												pkx_set_item(pkmn, itemsSorted[itemEntry + page * 40]);
 												break;
 											}
@@ -1011,7 +1011,7 @@ void pokemonEditor(u8* mainbuf) {
 						}
 						case 2 : {
 							if (!isTeam && confirmDisp(i18n(S_EDITOR_Q_CONFIRM_RELEASE))) {
-								memset(pkmn, 0, ofs.pkmnLength);
+								memset(pkmn, 0, perGameOffsets.pkmnLength);
 								pkx_set_as_it_is(mainbuf, box, currentEntry, pkmn);
 								operationDone = true;
 							}
@@ -1020,14 +1020,14 @@ void pokemonEditor(u8* mainbuf) {
 						case 3 : {
 							if (!isTeam) {
 								int genEntry = ((int)pkx_get_species(pkmn) - 1) % 40;
-								int page = ((int)pkx_get_species(pkmn) - 1) / 40, maxpages = ofs.maxSpecies / 40 + 1;
+								int page = ((int)pkx_get_species(pkmn) - 1) / 40, maxpages = perGameOffsets.maxSpecies / 40 + 1;
 								
 								while (aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 									hidScanInput();
 									calcCurrentEntryMorePages(&genEntry, &page, maxpages, 39, 8);
 									
 									if (hidKeysDown() & KEY_A) {
-										if (page*40 + genEntry < ofs.maxSpecies) {
+										if (page*40 + genEntry < perGameOffsets.maxSpecies) {
 											generate(mainbuf, isTeam, box, currentEntry, page, genEntry);
 											operationDone = true;
 										}
@@ -1052,14 +1052,14 @@ void pokemonEditor(u8* mainbuf) {
 			}
 			if (!pkx_get_species(pkmn) && !isTeam && !operationDone) {
 				int genEntry = 0;
-				int page = 0, maxpages = ofs.maxSpecies / 40 + 1;
+				int page = 0, maxpages = perGameOffsets.maxSpecies / 40 + 1;
 				
 				while (aptMainLoop() && !(hidKeysDown() & KEY_B)) {
 					hidScanInput();
 					calcCurrentEntryMorePages(&genEntry, &page, maxpages, 39, 8);
 					
 					if (hidKeysDown() & KEY_A) {
-						if (page*40 + genEntry < ofs.maxSpecies) {
+						if (page*40 + genEntry < perGameOffsets.maxSpecies) {
 							generate(mainbuf, isTeam, box, currentEntry, page, genEntry);
 							operationDone = true;
 						}

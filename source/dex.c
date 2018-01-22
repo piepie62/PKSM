@@ -129,7 +129,7 @@ int getDexFormCount(int species)
 void setDexFlags(u8 mainbuf[], int index, int gender, int shiny, int baseSpecies) {
 	const int brSize = 0x8C;
 	int shift = gender | (shiny << 1);
-	int off = ofs.pokedex + 0x08 + 0x80 + 0x68;
+	int off = perGameOffsets.pokedex + 0x08 + 0x80 + 0x68;
 	int bd = index >> 3; 
 	int bm = index & 7;
 	int bd1 = baseSpecies >> 3;
@@ -213,9 +213,9 @@ void setDex(u8 mainbuf[], u8* pkmn) {
 		return;
 	
 	int n = pkx_get_species(pkmn);
-	int MaxSpeciesID = ofs.maxSpecies;
-	int PokeDex = ofs.pokedex;
-	int PokeDexLanguageFlags = ofs.pokedex + 0x550;
+	int MaxSpeciesID = perGameOffsets.maxSpecies;
+	int PokeDex = perGameOffsets.pokedex;
+	int PokeDexLanguageFlags = perGameOffsets.pokedex + 0x550;
 	
 	if (n == 0 || n > MaxSpeciesID)
 		return;

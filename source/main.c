@@ -241,7 +241,7 @@ int main() {
 		FSUSER_OpenFile(&mainHandle, saveArch, fsMakePath(PATH_ASCII, "/main"), FS_OPEN_READ | FS_OPEN_WRITE, 0);		
 		FSFILE_GetSize(mainHandle, &mainSize);
 		
-		if (mainSize != ofs.saveSize)
+		if (mainSize != perGameOffsets.saveSize)
 		{
 			infoDisp(i18n(S_MAIN_INCORRECT_SAVE_SIZE));
 			exitServices();

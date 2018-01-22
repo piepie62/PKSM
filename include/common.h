@@ -95,6 +95,6 @@ struct {
 	u32 saveCountry;
 	u32 saveSize;
 	u32 boxSize;
-} ofs;
+} perGameOffsets;
 
 #endif
